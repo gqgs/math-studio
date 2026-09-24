@@ -1333,6 +1333,252 @@ h1 + p {
     font-size: 9px;
   }
 }
+/* Keep the working areas inside the viewport; scroll their contents instead. */
+#root {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.site-header,
+.site-footer {
+  width: 100%;
+  flex: none;
+}
+.site-header {
+  height: 62px;
+}
+.site-footer {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+main {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 18px;
+  margin: 0 auto;
+}
+.intro {
+  flex: none;
+  margin-bottom: 18px;
+}
+.intro h1 {
+  font-size: 35px;
+  margin: 8px 0;
+}
+.examples-button {
+  margin-top: 12px;
+}
+.workspace {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+.panel {
+  min-height: 0;
+}
+.editor-panel {
+  display: flex;
+  flex-direction: column;
+}
+.panel-heading,
+.editor-toolbar,
+.preview-toolbar,
+.editor-meta,
+.preview-footer {
+  flex: none;
+}
+.panel-heading {
+  height: 48px;
+}
+.source-editor {
+  height: auto;
+  min-height: 72px;
+  flex: 1;
+}
+.source-editor textarea {
+  height: 100%;
+}
+.symbols-panel {
+  flex: 0 1 auto;
+  min-height: 44px;
+  max-height: 45%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 12px 18px;
+}
+.symbols-heading {
+  cursor: pointer;
+  list-style: none;
+}
+.symbols-heading::-webkit-details-marker {
+  display: none;
+}
+.symbols-heading > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.symbols-panel:not([open]) .symbols-heading {
+  margin: 0;
+}
+.symbols-panel[open] .symbols-heading svg {
+  transform: rotate(180deg);
+}
+.symbols-heading:focus-visible {
+  outline: 2px solid #488965;
+  outline-offset: 3px;
+}
+.preview-paper {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #bbc9b2 transparent;
+  padding: 14px 18px;
+  overflow-anchor: none;
+}
+.formula-card {
+  min-height: 0;
+  margin-bottom: 12px;
+  padding: 8px 12px 10px;
+}
+.formula-card-top {
+  margin-bottom: 6px;
+}
+.formula-scroll {
+  min-height: 0;
+}
+.empty-preview {
+  padding: 28px 8px;
+}
+.below-workspace {
+  flex: none;
+  padding: 10px 0;
+}
+@media (max-height: 850px) {
+  .intro .eyebrow,
+  .intro p {
+    display: none;
+  }
+  .intro {
+    margin-bottom: 12px;
+  }
+  .intro h1 {
+    font-size: 30px;
+    margin: 0;
+  }
+  .examples-button {
+    margin-top: 0;
+  }
+  .site-header {
+    height: 56px;
+  }
+  main {
+    padding-top: 12px;
+  }
+}
+@media (max-width: 800px) {
+  .site-header {
+    height: 56px;
+  }
+  main {
+    padding-top: 10px;
+  }
+  .intro {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .intro .eyebrow,
+  .intro p {
+    display: none;
+  }
+  .intro h1 {
+    font-size: 25px;
+    margin: 0;
+  }
+  .examples-button {
+    margin: 0;
+    padding: 8px;
+  }
+  .examples-button span {
+    max-width: 80px;
+    white-space: normal;
+    font-size: 10px;
+  }
+  .examples-button > svg:last-child {
+    display: none;
+  }
+  .workspace {
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .panel-heading {
+    height: 38px;
+  }
+  .editor-toolbar,
+  .preview-toolbar {
+    min-height: 32px;
+  }
+  .editor-meta,
+  .preview-footer {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  .source-editor {
+    min-height: 48px;
+  }
+  .source-editor textarea {
+    font-size: 16px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .line-numbers {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .symbols-panel {
+    max-height: 40%;
+    min-height: 38px;
+    padding: 10px 13px;
+  }
+  .palette-search input {
+    font-size: 16px;
+  }
+  .preview-paper {
+    padding: 12px;
+  }
+  .below-workspace {
+    padding: 7px 0;
+  }
+  .friendly-tip,
+  .site-footer {
+    display: none;
+  }
+  .save-status {
+    margin-left: 0;
+    padding: 0;
+  }
+}
+@media (max-height: 550px) {
+  .intro,
+  .site-footer,
+  .friendly-tip {
+    display: none;
+  }
+  .site-header {
+    height: 48px;
+  }
+  .workspace {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: minmax(0, 1fr);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

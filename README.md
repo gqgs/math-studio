@@ -21,18 +21,20 @@ npm run preview
 ## Writing math
 
 - Write raw Typst math, for example `x^2 + y^2 = r^2`. A single enclosing `$…$` pair is also accepted.
-- Separate formulas with a blank line. A whitespace-only line also separates formulas.
-- Within a formula, normal line breaks continue the expression. Use `\` for a rendered line break and `&` for alignment.
+- A single newline creates a visible line break inside the same preview cell. A blank line (two newlines) starts a new cell; whitespace-only blank lines work too.
+- Use `&` to align equations across lines in a cell. Explicit Typst `\` breaks also work; combining one with an input newline does not add an extra break.
 - Symbol buttons insert at the textarea’s last selection. Roots, fractions, powers, and other structures can wrap selected text.
 - Undo/redo includes typing, symbol insertion, examples, and clearing. Use the toolbar, Ctrl/⌘ Z, or Ctrl/⌘ Shift Z.
 - Examples insert after the current formula. Copy source copies the whole scratchpad.
 - One draft is saved to this browser’s local storage, including an empty draft. Clearing browser storage removes it. There are no accounts, uploads, analytics, or cloud sync.
 
+The workspace fits the viewport. The editor and preview scroll independently, and the preview follows the cell being edited (or the approximate current line in a tall cell). The symbol palette can collapse; it starts collapsed on phones and short screens to leave room for editing.
+
 ## Rendering and compatibility
 
 The compiler, renderer, and wrapper are pinned to **typst.ts 0.7.0**, which bundles **Typst 0.14.2** ([release dependency metadata](https://github.com/Myriad-Dreamin/typst.ts/blob/v0.7.0/Cargo.lock)). Built-in math follows that version; newer examples from the online Typst reference may use features it does not contain.
 
-The editor uses a 150 ms debounce and pauses compilation during IME composition. Each formula is compiled independently. Results are cached by source, so reordering formulas does not require recompilation. Only the newest document’s pending work is queued. Source diagnostics account for the generated wrapper and point back to the textarea.
+The editor uses a 150 ms debounce and pauses compilation during IME composition. Each cell is compiled independently, with source newlines converted to visible math line breaks. Results are cached by source, so reordering formulas does not require recompilation. Only the newest document’s pending work is queued. Source diagnostics account for the generated wrapper and point back to the textarea.
 
 The worker has a 30-second initialization deadline and a five-second deadline per formula. An overlong formula terminates its worker, receives a diagnostic, and the remaining formulas continue in a new worker. Initialization failures offer a retry button. SVGs are displayed as isolated blob images rather than injected into the page.
 

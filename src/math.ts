@@ -7,7 +7,7 @@ export interface FormulaBlock {
   contentStartLine: number;
 }
 
-/** Blank lines are an app-level separator; all other syntax belongs to Typst. */
+/** Blank lines separate cells; single newlines remain inside each cell. */
 export function splitFormulas(input: string): FormulaBlock[] {
   const blocks: FormulaBlock[] = [];
   const separator = /\r?\n[\t ]*\r?\n(?:[\t ]*\r?\n)*/g;
@@ -41,10 +41,18 @@ export function splitFormulas(input: string): FormulaBlock[] {
 }
 
 export const PREAMBLE =
-  '#set page(width: auto, height: auto, margin: 12pt)\n#set text(font: "New Computer Modern Math", size: 20pt)\n$\n';
+  '#set page(width: auto, height: auto, margin: 6pt)\n#set text(font: "New Computer Modern Math", size: 20pt)\n$\n';
 export const WRAPPER_LINES = PREAMBLE.split('\n').length - 1;
 export function formulaDocument(source: string) {
-  return PREAMBLE + source + '\n$';
+  // Prefix the next line so trailing comments cannot swallow the inserted break.
+  // Preserve source line counts for diagnostics, and honor existing explicit breaks.
+  const lines = source.split(/\r?\n/);
+  const math = lines
+    .map((line, index) =>
+      index > 0 && !/\\\s*(?:\/\/.*)?$/.test(lines[index - 1]) ? '\\ ' + line : line,
+    )
+    .join('\n');
+  return PREAMBLE + math + '\n$';
 }
 
 export function diagnosticLine(range: string, block: FormulaBlock): number {
@@ -115,8 +123,8 @@ export const EXAMPLES = [
   { name: 'A matrix', description: 'Rows separated by semicolons', source: 'A = mat(1, 2; 3, 4)' },
   {
     name: 'Aligned equations',
-    description: 'Use & to align and \\ to break',
-    source: ['(x + 1)^2 &= x^2 + 2x + 1 \\', '  x^2 &= (x + 1)^2 - 2x - 1'].join('\n'),
+    description: 'New lines, aligned at &',
+    source: ['(x + 1)^2 &= x^2 + 2x + 1', 'x^2 &= (x + 1)^2 - 2x - 1'].join('\n'),
   },
   {
     name: 'Piecewise function',

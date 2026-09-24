@@ -44,15 +44,65 @@ test('renders every bundled example and palette template', async ({ page }) => {
   await expect(page.locator('.formula-error')).toHaveCount(0);
 });
 
+test('renders single newlines within a cell and blank lines as separate cells', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto('/');
+  const lines = ['x+2', 'y+2', 'y+4', 'y+5', 'y+6', 'y+7', 'y+8', 'y+10'];
+  await page.getByRole('textbox', { name: 'Math formulas' }).fill(lines.join('\n') + '\n\nz+1');
+  await expect(page.getByText('All formulas rendered')).toBeVisible();
+  const images = page.getByRole('img', { name: /^Formula:/ });
+  await expect(images).toHaveCount(2);
+  const tall = await images.nth(0).boundingBox();
+  const short = await images.nth(1).boundingBox();
+  expect(tall!.height).toBeGreaterThan(short!.height * 5);
+  expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1)).toBe(
+    true,
+  );
+  await page.screenshot({ path: 'test-results/grouped-lines.png' });
+});
+
+test('keeps editing and the active preview in view as cells and lines grow', async ({ page }) => {
+  for (const viewport of [
+    { width: 1366, height: 768 },
+    { width: 1024, height: 600 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+    const editor = page.getByRole('textbox', { name: 'Math formulas' });
+    const paper = page.getByRole('region', { name: 'Rendered formulas' });
+    const cells = Array.from({ length: 16 }, (_, index) => `x + ${index}`);
+    await editor.fill(cells.join('\n\n'));
+    await expect(page.getByText('All formulas rendered')).toBeVisible();
+    await expect(page.getByTestId('formula-card').last()).toBeInViewport();
+    await expect(editor).toBeInViewport();
+    expect(await paper.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1),
+    ).toBe(true);
+    await editor.fill(Array.from({ length: 45 }, (_, index) => `x + ${index}`).join('\n'));
+    await expect(page.getByText('All formulas rendered')).toBeVisible();
+    await expect(page.getByTestId('formula-card')).toHaveCount(1);
+    await expect.poll(() => paper.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    // Moving back to the start follows the first rendered line without moving the page.
+    await editor.press('Control+Home');
+    await expect.poll(() => paper.evaluate((element) => element.scrollTop)).toBeLessThan(30);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    await page.screenshot({ path: `test-results/viewport-${viewport.width}.png` });
+  }
+});
+
 test('keeps valid formulas visible, maps errors to source, and recovers', async ({ page }) => {
   await page.goto('/');
   const editor = page.getByRole('textbox', { name: 'Math formulas' });
-  await editor.fill('x^2\n\nfrac(\n\nalpha + beta');
+  await editor.fill('x^2\n\nalpha\nfrac(\n\nbeta');
   await expect(page.getByRole('img', { name: /^Formula:/ })).toHaveCount(2);
   await expect(page.locator('.formula-error')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Check line 3' }).click();
+  await page.getByRole('button', { name: 'Check line 4' }).click();
   await expect(editor).toBeFocused();
-  await editor.fill('x^2\n\nfrac(1, 2)\n\nalpha + beta');
+  await editor.fill('x^2\n\nalpha\nfrac(1, 2)\n\nbeta');
   await expect(page.getByText('All formulas rendered')).toBeVisible();
   await expect(page.getByRole('img', { name: /^Formula:/ })).toHaveCount(3);
 });

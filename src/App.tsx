@@ -70,6 +70,10 @@ export default function App() {
   const history = useRef(new EditHistory(initial.text));
   const textarea = useRef<HTMLTextAreaElement>(null);
   const lineNumbers = useRef<HTMLDivElement>(null);
+  const previewPaper = useRef<HTMLDivElement>(null);
+  const [symbolsOpen, setSymbolsOpen] = useState(
+    () => window.matchMedia('(min-width: 801px) and (min-height: 701px)').matches,
+  );
   const dialog = useRef<HTMLDialogElement>(null);
   const [modal, setModal] = useState<'examples' | 'guide' | null>(null);
   const [category, setCategory] = useState('Greek');
@@ -92,6 +96,40 @@ export default function App() {
     (block) => renderer.results.get(block.source)?.diagnostics.length,
   );
   const pending = renderer.blocks.some((block) => !renderer.results.has(block.source));
+  const activeSvg = activeBlock && renderer.results.get(activeBlock.source)?.svg;
+
+  // Follow editing within the preview's own scroll area, without scrolling the page.
+  useEffect(() => {
+    const paper = previewPaper.current;
+    if (!paper || !activeBlock) return;
+    const card = paper.querySelector<HTMLElement>(`[data-block-id="${activeBlock.id}"]`);
+    if (!card) return;
+    const reveal = () => {
+      const viewport = paper.getBoundingClientRect();
+      const bounds = card.getBoundingClientRect();
+      let top = bounds.top;
+      let bottom = bounds.bottom;
+      if (bounds.height > paper.clientHeight - 24) {
+        const image = card.querySelector('img');
+        const content = image?.getBoundingClientRect() ?? bounds;
+        const lineCount = activeBlock.source.split('\n').length;
+        const sourceLine = source.slice(0, cursor).split('\n').length;
+        const lineIndex = Math.max(
+          0,
+          Math.min(lineCount - 1, sourceLine - activeBlock.contentStartLine),
+        );
+        const y = content.top + (content.height * (lineIndex + 0.5)) / lineCount;
+        top = y - 28;
+        bottom = y + 28;
+      }
+      if (top < viewport.top + 12) paper.scrollTop += top - viewport.top - 12;
+      else if (bottom > viewport.bottom - 12) paper.scrollTop += bottom - viewport.bottom + 12;
+    };
+    const observer = new ResizeObserver(reveal);
+    observer.observe(card);
+    reveal();
+    return () => observer.disconnect();
+  }, [activeBlock?.id, activeBlock?.source, activeSvg, cursor, source, zoom]);
   const shownSymbols = SYMBOLS.filter((item) => {
     if (search.trim())
       return `${item.name} ${item.id} ${item.glyph} ${item.template} ${item.keywords}`
@@ -290,7 +328,7 @@ export default function App() {
                   <Redo2 size={16} />
                 </button>
                 <span className="toolbar-separator" />
-                <span className="toolbar-caption">A blank line starts a new formula</span>
+                <span className="toolbar-caption">New line ↵ · New cell ↵↵</span>
               </div>
               <div className="toolbar-group">
                 <button
@@ -331,7 +369,7 @@ export default function App() {
                 autoCapitalize="off"
                 autoCorrect="off"
                 value={source}
-                placeholder={'x^2 + y^2 = r^2\n\nYour next idea goes here…'}
+                placeholder={'x^2 + y^2 = r^2\nYour next idea goes here…'}
                 onChange={(event) =>
                   commit(
                     {
@@ -380,16 +418,23 @@ export default function App() {
             </div>
             <div className="editor-meta">
               <span id="editor-hint">
-                <span className="hint-symbol">↵</span> Use a blank line to separate formulas
+                <span className="hint-symbol">↵</span> Enter for a new line · Blank line for a new
+                cell
               </span>
               <span>{source.length} characters</span>
             </div>
 
-            <div className="symbols-panel">
-              <div className="symbols-heading">
+            <details
+              className="symbols-panel"
+              open={symbolsOpen}
+              onToggle={(event) => setSymbolsOpen(event.currentTarget.open)}
+            >
+              <summary className="symbols-heading">
                 <h3>At your fingertips</h3>
-                <span>Click to insert</span>
-              </div>
+                <span>
+                  Math symbols <ChevronDown size={13} />
+                </span>
+              </summary>
               <div className="quick-symbols" aria-label="Common symbols">
                 {QUICK_SYMBOLS.map((item) => (
                   <button
@@ -457,7 +502,7 @@ export default function App() {
                   </div>
                 )}
               </div>
-            </div>
+            </details>
           </section>
 
           <section className="preview-panel panel" aria-labelledby="preview-title">
@@ -478,7 +523,7 @@ export default function App() {
             </div>
             <div className="preview-toolbar">
               <span>
-                {renderer.blocks.length} {renderer.blocks.length === 1 ? 'formula' : 'formulas'}
+                {renderer.blocks.length} {renderer.blocks.length === 1 ? 'cell' : 'cells'}
                 <span className="preview-toolbar-detail"> · Beautifully typeset</span>
               </span>
               <div className="zoom-controls">
@@ -519,7 +564,13 @@ export default function App() {
                 </button>
               </div>
             </div>
-            <div className="preview-paper">
+            <div
+              className="preview-paper"
+              ref={previewPaper}
+              tabIndex={0}
+              role="region"
+              aria-label="Rendered formulas"
+            >
               {renderer.state === 'error' && (
                 <div className="renderer-message" role="alert">
                   <AlertCircle size={20} />
@@ -563,6 +614,7 @@ export default function App() {
                       className={`formula-card ${activeBlock?.id === block.id ? 'active' : ''} ${problem ? 'formula-error' : ''}`}
                       key={block.id}
                       data-testid="formula-card"
+                      data-block-id={block.id}
                     >
                       <div className="formula-card-top">
                         <span className="formula-number">
@@ -724,8 +776,8 @@ export default function App() {
         ) : (
           <>
             <p className="dialog-intro">
-              Write Typst math directly. Dollar signs are optional. Leave an empty line between
-              separate formulas.
+              Write Typst math directly. Dollar signs are optional. Press Enter for a new line
+              within a cell. Leave a blank line to start a new cell.
             </p>
             <div className="guide-table">
               <div>
@@ -750,9 +802,10 @@ export default function App() {
               ))}
             </div>
             <p className="guide-note">
-              Single line breaks continue a formula. Use <code>\</code> for a visible line break and{' '}
-              <code>&amp;</code> to align equations. Symbol buttons insert at your cursor; select
-              text first to wrap it in a root or fraction.
+              Single newlines appear as line breaks in the same cell. Two newlines start a new cell.
+              Use <code>&amp;</code> to align equations across lines; explicit <code>\</code> breaks
+              also work. Symbol buttons insert at your cursor; select text first to wrap it in a
+              root or fraction.
             </p>
             <a
               className="documentation-link"

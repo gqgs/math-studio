@@ -1,29 +1,48 @@
 import { describe, expect, it } from 'vitest';
-import { diagnosticLine, insertSymbol, splitFormulas, WRAPPER_LINES } from './math';
+import {
+  diagnosticLine,
+  formulaDocument,
+  insertSymbol,
+  PREAMBLE,
+  splitFormulas,
+  WRAPPER_LINES,
+} from './math';
 import { SYMBOLS } from './symbols';
 
 describe('formula blocks', () => {
-  it('preserves multiline expressions while separating whitespace-only blank lines', () => {
-    const source = ' \n\nx &= 1 \\\n &= 2\n \t\n\nalpha + beta\n\n';
+  it('groups single newlines into cells and splits on whitespace-only blank lines', () => {
+    const source = ' \n\nx = 1\ny = 2\n \t\n\nalpha + beta\n\n';
     const blocks = splitFormulas(source);
-    expect(blocks.map((block) => block.source)).toEqual(['x &= 1 \\\n &= 2', 'alpha + beta']);
+    expect(blocks.map((block) => block.source)).toEqual(['x = 1\ny = 2', 'alpha + beta']);
     expect(blocks.map((block) => block.startLine)).toEqual([3, 7]);
     expect(source.slice(blocks[1].start, blocks[1].end)).toBe('alpha + beta');
   });
   it('handles CRLF, empty input, and one optional outer delimiter pair', () => {
     expect(splitFormulas(' \r\n \t\r\n')).toEqual([]);
-    expect(splitFormulas('$ x^2 $\r\n \r\n$ alpha $').map((block) => block.source)).toEqual([
-      'x^2',
-      'alpha',
-    ]);
+    expect(splitFormulas('$ x^2\r\nalpha $\r\n \r\n$ beta $').map((block) => block.source)).toEqual(
+      ['x^2\r\nalpha', 'beta'],
+    );
     expect(splitFormulas('x + "$"')[0].source).toBe('x + "$"');
   });
   it('maps diagnostics out of the wrapper and clamps end-of-formula errors', () => {
-    const block = splitFormulas('a\n\n$\n x &= y \\\n z &= q\n$')[1];
-    expect(diagnosticLine(`${WRAPPER_LINES}:1`, block)).toBe(4);
-    expect(diagnosticLine(`${WRAPPER_LINES + 1}:2`, block)).toBe(5);
-    expect(diagnosticLine('100:1', block)).toBe(5);
+    const block = splitFormulas('a\n\n $ x\nfrac( $')[1];
+    expect(diagnosticLine(`${WRAPPER_LINES}:1`, block)).toBe(3);
+    expect(diagnosticLine(`${WRAPPER_LINES + 1}:2`, block)).toBe(4);
+    expect(diagnosticLine('100:1', block)).toBe(4);
     expect(diagnosticLine('', block)).toBe(3);
+  });
+});
+
+describe('visible line breaks', () => {
+  it('renders input newlines as math breaks without changing source line numbers', () => {
+    expect(formulaDocument('x+2\r\ny+2')).toBe(PREAMBLE + 'x+2\n\\ y+2\n$');
+  });
+  it('does not duplicate an explicit Typst line break', () => {
+    const source = 'x &= 1 \\\ny &= 2';
+    expect(formulaDocument(source)).toBe(PREAMBLE + source + '\n$');
+  });
+  it('keeps visible breaks after trailing comments', () => {
+    expect(formulaDocument('x // note\ny')).toBe(PREAMBLE + 'x // note\n\\ y\n$');
   });
 });
 
