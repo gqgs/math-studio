@@ -2,6 +2,11 @@
 
 A light, responsive math scratchpad with a real Typst preview. Formulas are compiled in a browser worker; draft text never leaves the browser.
 
+
+<p align="center">
+<img src="/image.png">
+</p>
+
 ## Run locally
 
 Requires Node.js 22.12+ (or Node.js 24+) and npm.
