@@ -1,7 +1,23 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator } from '@playwright/test';
 import { EXAMPLES } from '../src/math';
 import { SYMBOLS } from '../src/symbols';
 import AxeBuilder from '@axe-core/playwright';
+
+async function expectSource(editor: Locator, text: string) {
+  await expect
+    .poll(() =>
+      editor.locator('.cm-line').evaluateAll((lines) =>
+        lines
+          .map((line) => {
+            const copy = line.cloneNode(true) as HTMLElement;
+            copy.querySelectorAll('.cm-placeholder').forEach((placeholder) => placeholder.remove());
+            return copy.textContent;
+          })
+          .join('\n'),
+      ),
+    )
+    .toBe(text);
+}
 
 test('renders real math locally and presents a complete desktop workspace', async ({ page }) => {
   const errors: string[] = [];
@@ -42,6 +58,84 @@ test('renders every bundled example and palette template', async ({ page }) => {
     examples.length + templates.length,
   );
   await expect(page.locator('.formula-error')).toHaveCount(0);
+});
+
+test('CodeMirror preserves single-line breaks and blank-line cell boundaries while typing', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const editor = page.getByRole('textbox', { name: 'Math formulas' });
+  await editor.fill('x+2');
+  await editor.press('End');
+  await editor.press('Enter');
+  await editor.pressSequentially('y+2');
+  await expectSource(editor, 'x+2\ny+2');
+  await expect(page.getByText('All formulas rendered')).toBeVisible();
+  await expect(page.getByTestId('formula-card')).toHaveCount(1);
+  await editor.press('Enter');
+  await editor.press('Enter');
+  await editor.pressSequentially('z+3');
+  await expectSource(editor, 'x+2\ny+2\n\nz+3');
+  await expect(page.getByText('All formulas rendered')).toBeVisible();
+  await expect(page.getByTestId('formula-card')).toHaveCount(2);
+  await editor.press('Home');
+  await editor.press('Backspace');
+  await expectSource(editor, 'x+2\ny+2\nz+3');
+  await expect(page.getByTestId('formula-card')).toHaveCount(1);
+  await editor.press('Control+z');
+  await expectSource(editor, 'x+2\ny+2\n\nz+3');
+  await expect(page.getByTestId('formula-card')).toHaveCount(2);
+});
+
+test('highlights math, completes snippets, and always uses Enter for a newline', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const editor = page.getByRole('textbox', { name: 'Math formulas' });
+  await editor.fill('sqrt(2) + alpha');
+  await expect(editor.locator('.math-function')).toHaveText('sqrt');
+  await expect(editor.locator('.math-function')).toHaveCSS('color', 'rgb(35, 98, 73)');
+  await expect(editor.locator('.math-number')).toHaveText('2');
+  await expect(editor.locator('.math-symbol')).toHaveText('alpha');
+  await editor.fill('fra');
+  await editor.press('Control+Space');
+  await expect(page.getByRole('option', { name: /frac/ })).toBeVisible();
+  await editor.press('Tab');
+  await expectSource(editor, 'frac(a, b)');
+  await editor.pressSequentially('x');
+  await editor.press('Tab');
+  await editor.pressSequentially('2');
+  await expectSource(editor, 'frac(x, 2)');
+  await expect(page.getByText('All formulas rendered')).toBeVisible();
+  await editor.fill('alp');
+  await editor.press('Control+Space');
+  await expect(page.getByRole('option', { name: /alpha/ })).toBeVisible();
+  await editor.press('Enter');
+  await expectSource(editor, 'alp\n');
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+});
+
+test('supports bracket closing, search shortcuts, and compiler error underlines', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const editor = page.getByRole('textbox', { name: 'Math formulas' });
+  await editor.fill('');
+  await editor.pressSequentially('sqrt(');
+  await expectSource(editor, 'sqrt()');
+  await editor.pressSequentially('2)');
+  await expectSource(editor, 'sqrt(2)');
+  await editor.press('Control+f');
+  await expect(page.locator('.cm-search')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(editor).toBeFocused();
+  await editor.fill('x\ny\n\nalpha\nfrac(');
+  await expect(editor.locator('.cm-lintRange-error')).toHaveText('frac(');
+  await page.getByRole('button', { name: 'Check line 5' }).click();
+  await expect(editor).toBeFocused();
+  await editor.fill('x\ny\n\nalpha\nfrac(1, 2)');
+  await expect(page.getByText('All formulas rendered')).toBeVisible();
+  await expect(editor.locator('.cm-lintRange-error')).toHaveCount(0);
 });
 
 test('renders single newlines within a cell and blank lines as separate cells', async ({
@@ -113,17 +207,17 @@ test('inserts at the remembered selection and supports undo, redo, and clear', a
   await editor.fill('a + b');
   await editor.selectText();
   await page.getByRole('button', { name: 'Insert Square root', exact: true }).click();
-  await expect(editor).toHaveValue('sqrt(a + b)');
+  await expectSource(editor, 'sqrt(a + b)');
   await expect(editor).toBeFocused();
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(editor).toHaveValue('a + b');
+  await expectSource(editor, 'a + b');
   await page.getByRole('button', { name: 'Redo', exact: true }).click();
-  await expect(editor).toHaveValue('sqrt(a + b)');
+  await expectSource(editor, 'sqrt(a + b)');
   await page.getByRole('button', { name: 'Clear formulas' }).click();
-  await expect(editor).toHaveValue('');
+  await expectSource(editor, '');
   await expect(page.getByText('Every idea starts somewhere.')).toBeVisible();
   await editor.press('Control+z');
-  await expect(editor).toHaveValue('sqrt(a + b)');
+  await expectSource(editor, 'sqrt(a + b)');
 });
 
 test('searches symbols, inserts examples without losing text, and restores a draft', async ({
@@ -135,17 +229,17 @@ test('searches symbols, inserts examples without losing text, and restores a dra
   await page.getByRole('textbox', { name: 'Search symbols' }).fill('lambda');
   await expect(page.locator('.symbol-grid button')).toHaveCount(1);
   await page.getByRole('button', { name: 'Insert Lambda', exact: true }).click();
-  await expect(editor).toHaveValue('x^2 lambda');
+  await expectSource(editor, 'x^2 lambda');
   await page.getByRole('button', { name: 'Start with an example' }).click();
   await page.getByRole('button', { name: /Euler’s identity/ }).click();
-  await expect(editor).toHaveValue('x^2 lambda\n\ne^(i pi) + 1 = 0');
+  await expectSource(editor, 'x^2 lambda\n\ne^(i pi) + 1 = 0');
   await expect(page.getByText('Draft saved in this browser')).toBeVisible();
   await page.reload();
-  await expect(editor).toHaveValue('x^2 lambda\n\ne^(i pi) + 1 = 0');
+  await expectSource(editor, 'x^2 lambda\n\ne^(i pi) + 1 = 0');
   await page.getByRole('button', { name: 'Clear formulas' }).click();
   await expect(page.getByText('Draft saved in this browser')).toBeVisible();
   await page.reload();
-  await expect(editor).toHaveValue('');
+  await expectSource(editor, '');
 });
 
 test('honors IME composition and the latest edit', async ({ page }) => {

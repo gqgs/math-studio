@@ -295,48 +295,59 @@ h1 + p {
   position: relative;
   background: #fff;
 }
-.line-numbers {
-  width: 48px;
-  flex-shrink: 0;
-  padding: 21px 12px 24px 0;
-  text-align: right;
-  color: #656861;
-  font:
-    12px/28px ui-monospace,
-    SFMono-Regular,
-    Consolas,
-    monospace;
-  user-select: none;
-  overflow: hidden;
-  background: #fdfdfa;
-}
-.source-editor textarea {
-  border: 0;
-  border-radius: 0;
-  resize: none;
-  outline: none !important;
+.math-editor {
   width: 100%;
   min-width: 0;
-  background: transparent;
-  padding: 21px 18px 24px 10px;
-  color: #39583f;
-  font:
-    12.5px/28px ui-monospace,
-    SFMono-Regular,
-    Consolas,
-    'Liberation Mono',
-    monospace;
-  white-space: pre;
-  tab-size: 2;
-  overflow: auto;
-  caret-color: #287d54;
+  height: 100%;
+  min-height: 0;
 }
+.math-editor .cm-editor {
+  height: 100%;
+}
+.math-editor .cm-scroller {
+  min-height: 0;
+}
+.math-editor .cm-search {
+  font:
+    11px/1.6 Inter,
+    sans-serif;
+}
+.math-editor .cm-search label {
+  white-space: nowrap;
+}
+.math-editor .math-function {
+  color: #236249;
+}
+.math-editor .math-symbol {
+  color: #704390;
+}
+.math-editor .math-number {
+  color: #96551b;
+}
+.math-editor .math-string {
+  color: #8c3e55;
+}
+.math-editor .math-comment {
+  color: #677160;
+  font-style: italic;
+}
+.math-editor .math-keyword {
+  color: #754083;
+}
+.math-editor .math-operator {
+  color: #536575;
+}
+.math-editor .math-bracket {
+  color: #526448;
+}
+.shortcut-table {
+  margin-top: 18px;
+}
+
 .source-editor:focus-within {
   box-shadow: inset 3px 0 0 #82a57a;
 }
-.source-editor textarea::placeholder {
-  color: #626860;
-}
+
 .editor-meta {
   display: flex;
   justify-content: space-between;
@@ -1070,9 +1081,7 @@ h1 + p {
   .friendly-tip p {
     max-width: 480px;
   }
-  .source-editor textarea {
-    font-size: 11.5px;
-  }
+
   .preview-toolbar-detail {
     display: none;
   }
@@ -1122,9 +1131,7 @@ h1 + p {
   .source-editor {
     height: 210px;
   }
-  .source-editor textarea {
-    font-size: 13px;
-  }
+
   .symbol-grid {
     grid-template-columns: repeat(8, minmax(0, 1fr));
     max-height: 126px;
@@ -1239,14 +1246,7 @@ h1 + p {
   .editor-toolbar .toolbar-separator {
     margin: 0 3px;
   }
-  .line-numbers {
-    width: 34px;
-    padding-right: 9px;
-  }
-  .source-editor textarea {
-    padding-left: 8px;
-    font-size: 11px;
-  }
+
   .editor-meta {
     padding-left: 13px;
     padding-right: 13px;
@@ -1398,9 +1398,7 @@ main {
   min-height: 72px;
   flex: 1;
 }
-.source-editor textarea {
-  height: 100%;
-}
+
 .symbols-panel {
   flex: 0 1 auto;
   min-height: 44px;
@@ -1533,15 +1531,7 @@ main {
   .source-editor {
     min-height: 48px;
   }
-  .source-editor textarea {
-    font-size: 16px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-  }
-  .line-numbers {
-    padding-top: 10px;
-    padding-bottom: 10px;
-  }
+
   .symbols-panel {
     max-height: 40%;
     min-height: 38px;

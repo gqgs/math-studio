@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDownLeft,
   ArrowRight,
@@ -33,7 +33,7 @@ import {
   type MathSymbol,
 } from './math';
 import { CATEGORIES, QUICK_SYMBOLS, SYMBOLS } from './symbols';
-import { EditHistory } from './history';
+import { MathEditor, type MathEditorHandle, type EditorSnapshot } from './MathEditor';
 import { useRenderer } from './use-renderer';
 
 const DRAFT_KEY = 'math-studio:draft:v1';
@@ -67,9 +67,15 @@ function FormulaImage({ svg, source, zoom }: { svg: string; source: string; zoom
 export default function App() {
   const [initial] = useState(readDraft);
   const [source, setSource] = useState(initial.text);
-  const history = useRef(new EditHistory(initial.text));
-  const textarea = useRef<HTMLTextAreaElement>(null);
-  const lineNumbers = useRef<HTMLDivElement>(null);
+  const editor = useRef<MathEditorHandle>(null);
+  const sourceRef = useRef(initial.text);
+  const [editorState, setEditorState] = useState<EditorSnapshot>({
+    text: initial.text,
+    start: 0,
+    end: 0,
+    canUndo: false,
+    canRedo: false,
+  });
   const previewPaper = useRef<HTMLDivElement>(null);
   const [symbolsOpen, setSymbolsOpen] = useState(
     () => window.matchMedia('(min-width: 801px) and (min-height: 701px)').matches,
@@ -87,7 +93,16 @@ export default function App() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [zoom, setZoom] = useState(1);
   const renderer = useRenderer(source, composing);
-  const lines = source.split('\n').length;
+  const editorDiagnostics = useMemo(
+    () =>
+      renderer.blocks.flatMap((block) =>
+        (renderer.results.get(block.source)?.diagnostics ?? []).map((diagnostic) => ({
+          line: diagnosticLine(diagnostic.range, block),
+          message: diagnostic.message,
+        })),
+      ),
+    [renderer.blocks, renderer.results],
+  );
   const activeBlock = renderer.blocks.find((block) => cursor >= block.start && cursor <= block.end);
   const readyCount = renderer.blocks.filter(
     (block) => renderer.results.get(block.source)?.svg,
@@ -155,7 +170,7 @@ export default function App() {
   useEffect(() => {
     const flush = () => {
       try {
-        localStorage.setItem(DRAFT_KEY, history.current.current.text);
+        localStorage.setItem(DRAFT_KEY, sourceRef.current);
       } catch {
         /* The UI already reports storage failure. */
       }
@@ -183,45 +198,21 @@ export default function App() {
     toastTimer.current = setTimeout(() => setToast(''), 3200);
   }
 
-  function focusSelection(edit: Edit) {
-    requestAnimationFrame(() => {
-      textarea.current?.focus();
-      textarea.current?.setSelectionRange(edit.start, edit.end);
-      const input = textarea.current;
-      if (input) {
-        const line = edit.text.slice(0, edit.start).split('\n').length - 1;
-        const lineHeight = parseFloat(getComputedStyle(input).lineHeight);
-        const y = line * lineHeight;
-        if (y < input.scrollTop || y + lineHeight > input.scrollTop + input.clientHeight - 42) {
-          input.scrollTop = Math.max(0, y - input.clientHeight / 3);
-        }
-      }
-      setCursor(edit.start);
-    });
-  }
-
-  function commit(edit: Edit, typing = false) {
-    history.current.commit(edit, typing);
-    setSource(edit.text);
-    setCursor(edit.start);
-    if (!typing) focusSelection(edit);
+  function commit(edit: Edit) {
+    editor.current?.apply(edit);
   }
 
   function restore(direction: 'undo' | 'redo') {
-    const edit = history.current[direction]();
-    setSource(edit.text);
-    focusSelection(edit);
+    editor.current?.[direction]();
   }
 
   function insert(item: MathSymbol) {
-    const start = textarea.current?.selectionStart ?? history.current.current.start;
-    const end = textarea.current?.selectionEnd ?? history.current.current.end;
-    history.current.selection(start, end);
-    commit(insertSymbol(source, start, end, item));
+    const selection = editor.current?.snapshot() ?? editorState;
+    commit(insertSymbol(selection.text, selection.start, selection.end, item));
   }
 
   function insertExample(example: string) {
-    const position = history.current.current.start;
+    const position = (editor.current?.snapshot() ?? editorState).start;
     const block = renderer.blocks.find((item) => position >= item.start && position <= item.end);
     const at = block ? block.end : position;
     const before = source.slice(0, at).trimEnd();
@@ -229,7 +220,9 @@ export default function App() {
     const start = before.length + (before ? 2 : 0);
     const text = `${before}${before ? '\n\n' : ''}${example}${after ? '\n\n' + after : ''}`;
     setModal(null);
-    commit({ text, start: start + example.length, end: start + example.length });
+    requestAnimationFrame(() =>
+      commit({ text, start: start + example.length, end: start + example.length }),
+    );
     notify('Example inserted');
   }
 
@@ -238,8 +231,7 @@ export default function App() {
       await navigator.clipboard.writeText(source);
       notify('Source copied to clipboard');
     } catch {
-      textarea.current?.focus();
-      textarea.current?.select();
+      editor.current?.select(0, source.length);
       notify('Source selected. Press Ctrl+C or ⌘C to copy.');
     }
   }
@@ -257,9 +249,7 @@ export default function App() {
           source.indexOf('\n', start) === -1 ? source.length : source.indexOf('\n', start),
         )
       : block.end;
-    history.current.selection(start, end);
-    focusSelection({ text: source, start, end });
-    textarea.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    editor.current?.select(start, end);
   }
 
   return (
@@ -313,7 +303,7 @@ export default function App() {
                   className="icon-button"
                   title="Undo (Ctrl/⌘ Z)"
                   aria-label="Undo"
-                  disabled={!history.current.canUndo}
+                  disabled={!editorState.canUndo}
                   onClick={() => restore('undo')}
                 >
                   <Undo2 size={16} />
@@ -322,7 +312,7 @@ export default function App() {
                   className="icon-button"
                   title="Redo (Ctrl/⌘ Shift Z)"
                   aria-label="Redo"
-                  disabled={!history.current.canRedo}
+                  disabled={!editorState.canRedo}
                   onClick={() => restore('redo')}
                 >
                   <Redo2 size={16} />
@@ -355,65 +345,17 @@ export default function App() {
               </div>
             </div>
             <div className="source-editor">
-              <div ref={lineNumbers} className="line-numbers" aria-hidden="true">
-                {Array.from({ length: lines }, (_, i) => (
-                  <div key={i}>{i + 1}</div>
-                ))}
-              </div>
-              <textarea
-                id="formula-input"
-                ref={textarea}
-                aria-label="Math formulas"
-                aria-describedby="editor-hint"
-                spellCheck={false}
-                autoCapitalize="off"
-                autoCorrect="off"
-                value={source}
-                placeholder={'x^2 + y^2 = r^2\nYour next idea goes here…'}
-                onChange={(event) =>
-                  commit(
-                    {
-                      text: event.target.value,
-                      start: event.target.selectionStart,
-                      end: event.target.selectionEnd,
-                    },
-                    true,
-                  )
-                }
-                onSelect={(event) => {
-                  const element = event.currentTarget;
-                  history.current.selection(element.selectionStart, element.selectionEnd);
-                  setCursor(element.selectionStart);
+              <MathEditor
+                ref={editor}
+                initialSource={initial.text}
+                onChange={(snapshot) => {
+                  sourceRef.current = snapshot.text;
+                  setSource(snapshot.text);
+                  setCursor(snapshot.start);
+                  setEditorState(snapshot);
                 }}
-                onBlur={(event) => {
-                  history.current.selection(
-                    event.currentTarget.selectionStart,
-                    event.currentTarget.selectionEnd,
-                  );
-                  history.current.breakGroup();
-                }}
-                onPointerDown={() => history.current.breakGroup()}
-                onScroll={(event) => {
-                  if (lineNumbers.current)
-                    lineNumbers.current.scrollTop = event.currentTarget.scrollTop;
-                }}
-                onCompositionStart={() => setComposing(true)}
-                onCompositionEnd={() => setComposing(false)}
-                onKeyDown={(event) => {
-                  if (event.nativeEvent.isComposing) return;
-                  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-                    event.preventDefault();
-                    restore(event.shiftKey ? 'redo' : 'undo');
-                  } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
-                    event.preventDefault();
-                    restore('redo');
-                  } else if (
-                    ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(
-                      event.key,
-                    )
-                  )
-                    history.current.breakGroup();
-                }}
+                onCompositionChange={setComposing}
+                diagnostics={editorDiagnostics}
               />
             </div>
             <div className="editor-meta">
@@ -806,6 +748,32 @@ export default function App() {
               Use <code>&amp;</code> to align equations across lines; explicit <code>\</code> breaks
               also work. Symbol buttons insert at your cursor; select text first to wrap it in a
               root or fraction.
+            </p>
+            <div className="guide-table shortcut-table" aria-label="Editor shortcuts">
+              <div>
+                <span>Editor shortcuts</span>
+                <span>Keys</span>
+              </div>
+              {[
+                ['Suggestions', 'Ctrl + Space'],
+                ['Accept / next field', 'Tab'],
+                ['Previous field', 'Shift + Tab'],
+                ['New line / new cell', 'Enter / Enter twice'],
+                ['Undo / redo', 'Ctrl/⌘ Z / Ctrl/⌘ Shift Z'],
+                ['Find / replace', 'Ctrl/⌘ F / Ctrl/⌘ Alt F'],
+                ['Move line', 'Alt + ↑ / ↓'],
+                ['Dismiss suggestions', 'Escape'],
+              ].map(([action, keys]) => (
+                <div key={action}>
+                  <span>{action}</span>
+                  <code>{keys}</code>
+                </div>
+              ))}
+            </div>
+            <p className="guide-note">
+              Enter always inserts a newline, even when suggestions are open. Tab moves to the next
+              control when no suggestion or snippet field is active. Compiler errors are underlined
+              on their source line.
             </p>
             <a
               className="documentation-link"
