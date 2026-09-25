@@ -21,6 +21,8 @@ import {
   redoDepth,
   isolateHistory,
   insertNewline,
+  copyLineUp,
+  copyLineDown,
 } from '@codemirror/commands';
 import { bracketMatching } from '@codemirror/language';
 import {
@@ -144,7 +146,7 @@ export const MathEditor = forwardRef<MathEditorHandle, Props>(function MathEdito
           closeBrackets(),
           autocompletion({ override: [completeMath], defaultKeymap: false, interactionDelay: 0 }),
           search({ top: true }),
-          highlightSelectionMatches(),
+          highlightSelectionMatches({ highlightWordAroundCursor: true }),
           lintGutter(),
           Prec.highest(
             keymap.of([
@@ -159,6 +161,8 @@ export const MathEditor = forwardRef<MathEditorHandle, Props>(function MathEdito
               { key: 'Tab', run: nextSnippetField },
               { key: 'Tab', run: acceptCompletion },
               { key: 'Shift-Tab', run: prevSnippetField },
+              { key: 'Ctrl-Shift-Alt-ArrowUp', run: copyLineUp },
+              { key: 'Ctrl-Shift-Alt-ArrowDown', run: copyLineDown },
             ]),
           ),
           keymap.of([

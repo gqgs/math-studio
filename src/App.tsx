@@ -762,6 +762,7 @@ export default function App() {
                 ['Undo / redo', 'Ctrl/⌘ Z / Ctrl/⌘ Shift Z'],
                 ['Find / replace', 'Ctrl/⌘ F / Ctrl/⌘ Alt F'],
                 ['Move line', 'Alt + ↑ / ↓'],
+                ['Duplicate line', 'Ctrl + Shift + Alt + ↑ / ↓'],
                 ['Dismiss suggestions', 'Escape'],
               ].map(([action, keys]) => (
                 <div key={action}>

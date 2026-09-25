@@ -41,7 +41,7 @@ CodeMirror 6 provides undo history, selections, line numbers, bracket matching/c
 - **Enter** always inserts a literal newline, including when autocomplete is open. **Enter twice** creates a new cell. No automatic indentation or completion rewrites these boundaries.
 - **Ctrl+Space** opens math suggestions. **Tab** accepts a suggestion or moves through snippet fields; **Shift+Tab** moves backward. Outside an active suggestion/snippet, Tab moves focus normally.
 - Fraction, matrix, root, integral, and other completion snippets provide editable placeholders. Completions insert Typst source, not Unicode replacements.
-- **Ctrl/⌘ F** opens search; **Ctrl/⌘ Alt F** opens replace. **Alt+↑/↓** moves lines. **Ctrl/⌘ Z** and **Ctrl/⌘ Shift Z** undo and redo, including toolbar edits.
+- **Ctrl/⌘ F** opens search; **Ctrl/⌘ Alt F** opens replace. **Alt+↑/↓** moves lines; **Ctrl+Shift+Alt+↑/↓** duplicates them. **Ctrl/⌘ Z** and **Ctrl/⌘ Shift Z** undo and redo, including toolbar edits.
 - The syntax guide in the app includes these shortcuts. Rendered cells, draft storage, and newline transformation continue to use the same plain-text source.
 
 ## Rendering and compatibility

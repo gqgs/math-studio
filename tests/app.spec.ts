@@ -87,6 +87,32 @@ test('CodeMirror preserves single-line breaks and blank-line cell boundaries whi
   await expect(page.getByTestId('formula-card')).toHaveCount(2);
 });
 
+test('duplicates the current line in either direction without changing cell boundaries', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const editor = page.getByRole('textbox', { name: 'Math formulas' });
+  await editor.fill('x+1\n\nfrac(1, 2)');
+  await editor.press('Control+Shift+Alt+ArrowDown');
+  await expectSource(editor, 'x+1\n\nfrac(1, 2)\nfrac(1, 2)');
+  await expect(page.getByTestId('formula-card')).toHaveCount(2);
+  await editor.press('Control+z');
+  await expectSource(editor, 'x+1\n\nfrac(1, 2)');
+  await editor.press('Control+Shift+Alt+ArrowUp');
+  await expectSource(editor, 'x+1\n\nfrac(1, 2)\nfrac(1, 2)');
+  await expect(page.getByTestId('formula-card')).toHaveCount(2);
+});
+
+test('highlights the current word as well as its other matches', async ({ page }) => {
+  await page.goto('/');
+  const editor = page.getByRole('textbox', { name: 'Math formulas' });
+  await editor.fill('frac(1, 2)\nfrac(3, 4)');
+  await editor.press('Home');
+  await expect(editor.locator('.cm-selectionMatch-main')).toHaveText('frac');
+  await expect(editor.locator('.cm-selectionMatch')).toHaveCount(2);
+  await expect(editor.locator('.math-function')).toHaveCount(2);
+});
+
 test('highlights math, completes snippets, and always uses Enter for a newline', async ({
   page,
 }) => {
