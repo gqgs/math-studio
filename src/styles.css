@@ -1740,3 +1740,70 @@ main {
     sans-serif;
   letter-spacing: normal;
 }
+
+/* Keep the daily workspace close to the top, with tools in one compact header. */
+.site-header {
+  height: 54px;
+  gap: 24px;
+}
+.site-header .brand {
+  font-size: 21px;
+}
+.site-header .brand-mark {
+  width: 30px;
+  height: 32px;
+  font-size: 25px;
+}
+.site-header .view-switcher {
+  margin: 0 auto 0 0;
+}
+.site-header .header-right {
+  gap: 20px;
+}
+main {
+  padding-top: 10px;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 800px) {
+  .site-header {
+    height: 92px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 12px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  .site-header .header-right {
+    justify-self: end;
+    gap: 12px;
+  }
+  .site-header .view-switcher {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+  .site-header .text-button {
+    font-size: 11px;
+    gap: 5px;
+  }
+  .site-header .guide-button > svg:last-child {
+    display: none;
+  }
+  .site-header .brand {
+    font-size: 19px;
+    gap: 6px;
+  }
+  .site-header .brand-mark {
+    width: 27px;
+    height: 29px;
+  }
+}

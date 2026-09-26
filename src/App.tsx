@@ -264,16 +264,6 @@ export default function App() {
             <span className="brand-dot">.</span>
           </span>
         </a>
-        <div className="header-right">
-          <span className="header-caption">A little space for big ideas</span>
-          <span className="header-divider" />
-          <button className="text-button guide-button" onClick={() => setModal('guide')}>
-            <BookOpen size={16} /> Syntax guide <ArrowRight size={14} />
-          </button>
-        </div>
-      </header>
-
-      <main>
         <nav className="view-switcher" aria-label="Workspace views">
           <button aria-pressed={view === 'write'} onClick={() => setView('write')}>
             Write formulas
@@ -282,24 +272,24 @@ export default function App() {
             Plot formulas
           </button>
         </nav>
-        <div className="writing-view" hidden={view !== 'write'}>
-          <section className="intro" aria-labelledby="page-title">
-            <div>
-              <div className="eyebrow">
-                <span /> THINK IT. TYPE IT. SEE IT.
-              </div>
-              <h1 id="page-title">
-                Make room for <em>math.</em>
-              </h1>
-              <p>From a simple fraction to your next big idea. Just start typing.</p>
-            </div>
-            <button className="examples-button" onClick={() => setModal('examples')}>
-              <Sparkles size={16} />
-              <span>Start with an example</span>
-              <ChevronDown size={15} />
-            </button>
-          </section>
+        <div className="header-right">
+          <button
+            className="text-button header-examples"
+            aria-label="Start with an example"
+            hidden={view !== 'write'}
+            onClick={() => setModal('examples')}
+          >
+            <Sparkles size={16} /> Examples
+          </button>
+          <button className="text-button guide-button" onClick={() => setModal('guide')}>
+            <BookOpen size={16} /> Syntax guide <ArrowRight size={14} />
+          </button>
+        </div>
+      </header>
 
+      <main>
+        <div className="writing-view" hidden={view !== 'write'}>
+          <h1 className="visually-hidden">Formula editor</h1>
           <div className="workspace">
             <section className="editor-panel panel" aria-labelledby="editor-title">
               <div className="panel-heading">
