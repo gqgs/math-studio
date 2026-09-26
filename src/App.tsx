@@ -35,6 +35,7 @@ import {
 import { CATEGORIES, QUICK_SYMBOLS, SYMBOLS } from './symbols';
 import { MathEditor, type MathEditorHandle, type EditorSnapshot } from './MathEditor';
 import { useRenderer } from './use-renderer';
+import { PlotView } from './PlotView';
 
 const DRAFT_KEY = 'math-studio:draft:v1';
 
@@ -65,6 +66,7 @@ function FormulaImage({ svg, source, zoom }: { svg: string; source: string; zoom
 }
 
 export default function App() {
+  const [view, setView] = useState<'write' | 'plot'>('write');
   const [initial] = useState(readDraft);
   const [source, setSource] = useState(initial.text);
   const editor = useRef<MathEditorHandle>(null);
@@ -272,385 +274,402 @@ export default function App() {
       </header>
 
       <main>
-        <section className="intro" aria-labelledby="page-title">
-          <div>
-            <div className="eyebrow">
-              <span /> THINK IT. TYPE IT. SEE IT.
-            </div>
-            <h1 id="page-title">
-              Make room for <em>math.</em>
-            </h1>
-            <p>From a simple fraction to your next big idea. Just start typing.</p>
-          </div>
-          <button className="examples-button" onClick={() => setModal('examples')}>
-            <Sparkles size={16} />
-            <span>Start with an example</span>
-            <ChevronDown size={15} />
+        <nav className="view-switcher" aria-label="Workspace views">
+          <button aria-pressed={view === 'write'} onClick={() => setView('write')}>
+            Write formulas
           </button>
-        </section>
+          <button aria-pressed={view === 'plot'} onClick={() => setView('plot')}>
+            Plot formulas
+          </button>
+        </nav>
+        <div className="writing-view" hidden={view !== 'write'}>
+          <section className="intro" aria-labelledby="page-title">
+            <div>
+              <div className="eyebrow">
+                <span /> THINK IT. TYPE IT. SEE IT.
+              </div>
+              <h1 id="page-title">
+                Make room for <em>math.</em>
+              </h1>
+              <p>From a simple fraction to your next big idea. Just start typing.</p>
+            </div>
+            <button className="examples-button" onClick={() => setModal('examples')}>
+              <Sparkles size={16} />
+              <span>Start with an example</span>
+              <ChevronDown size={15} />
+            </button>
+          </section>
 
-        <div className="workspace">
-          <section className="editor-panel panel" aria-labelledby="editor-title">
-            <div className="panel-heading">
-              <h2 id="editor-title">
-                <Code2 size={17} /> Your formulas
-              </h2>
-              <span className="language-tag">Typst math</span>
-            </div>
-            <div className="editor-toolbar">
-              <div className="toolbar-group">
-                <button
-                  className="icon-button"
-                  title="Undo (Ctrl/⌘ Z)"
-                  aria-label="Undo"
-                  disabled={!editorState.canUndo}
-                  onClick={() => restore('undo')}
-                >
-                  <Undo2 size={16} />
-                </button>
-                <button
-                  className="icon-button"
-                  title="Redo (Ctrl/⌘ Shift Z)"
-                  aria-label="Redo"
-                  disabled={!editorState.canRedo}
-                  onClick={() => restore('redo')}
-                >
-                  <Redo2 size={16} />
-                </button>
-                <span className="toolbar-separator" />
-                <span className="toolbar-caption">New line ↵ · New cell ↵↵</span>
+          <div className="workspace">
+            <section className="editor-panel panel" aria-labelledby="editor-title">
+              <div className="panel-heading">
+                <h2 id="editor-title">
+                  <Code2 size={17} /> Your formulas
+                </h2>
+                <span className="language-tag">Typst math</span>
               </div>
-              <div className="toolbar-group">
-                <button
-                  className="icon-button"
-                  title="Copy all source"
-                  aria-label="Copy all source"
-                  disabled={!source}
-                  onClick={copySource}
-                >
-                  <Copy size={15} />
-                </button>
-                <button
-                  className="icon-button"
-                  title="Clear formulas"
-                  aria-label="Clear formulas"
-                  disabled={!source}
-                  onClick={() => {
-                    commit({ text: '', start: 0, end: 0 });
-                    notify('Cleared. You can undo this.');
-                  }}
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            </div>
-            <div className="source-editor">
-              <MathEditor
-                ref={editor}
-                initialSource={initial.text}
-                onChange={(snapshot) => {
-                  sourceRef.current = snapshot.text;
-                  setSource(snapshot.text);
-                  setCursor(snapshot.start);
-                  setEditorState(snapshot);
-                }}
-                onCompositionChange={setComposing}
-                diagnostics={editorDiagnostics}
-              />
-            </div>
-            <div className="editor-meta">
-              <span id="editor-hint">
-                <span className="hint-symbol">↵</span> Enter for a new line · Blank line for a new
-                cell
-              </span>
-              <span>{source.length} characters</span>
-            </div>
-
-            <details
-              className="symbols-panel"
-              open={symbolsOpen}
-              onToggle={(event) => setSymbolsOpen(event.currentTarget.open)}
-            >
-              <summary className="symbols-heading">
-                <h3>At your fingertips</h3>
-                <span>
-                  Math symbols <ChevronDown size={13} />
-                </span>
-              </summary>
-              <div className="quick-symbols" aria-label="Common symbols">
-                {QUICK_SYMBOLS.map((item) => (
-                  <button
-                    key={item.id}
-                    className="quick-symbol"
-                    onClick={() => insert(item)}
-                    title={`${item.name} · ${item.template.replaceAll(/\{\{|\}\}/g, '')}`}
-                    aria-label={`Insert ${item.name}`}
-                  >
-                    <span>{item.glyph}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="palette-search">
-                <Search size={15} />
-                <input
-                  aria-label="Search symbols"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Find a symbol…"
-                />
-                {search ? (
+              <div className="editor-toolbar">
+                <div className="toolbar-group">
                   <button
                     className="icon-button"
-                    aria-label="Clear symbol search"
-                    onClick={() => setSearch('')}
+                    title="Undo (Ctrl/⌘ Z)"
+                    aria-label="Undo"
+                    disabled={!editorState.canUndo}
+                    onClick={() => restore('undo')}
                   >
-                    <X size={14} />
+                    <Undo2 size={16} />
                   </button>
-                ) : (
-                  <span className="search-hint">α → ∞</span>
-                )}
-              </div>
-              <div className="category-tabs" aria-label="Symbol categories">
-                {CATEGORIES.map((item) => (
                   <button
-                    key={item}
-                    aria-pressed={category === item && !search}
-                    className={category === item && !search ? 'selected' : ''}
+                    className="icon-button"
+                    title="Redo (Ctrl/⌘ Shift Z)"
+                    aria-label="Redo"
+                    disabled={!editorState.canRedo}
+                    onClick={() => restore('redo')}
+                  >
+                    <Redo2 size={16} />
+                  </button>
+                  <span className="toolbar-separator" />
+                  <span className="toolbar-caption">New line ↵ · New cell ↵↵</span>
+                </div>
+                <div className="toolbar-group">
+                  <button
+                    className="icon-button"
+                    title="Copy all source"
+                    aria-label="Copy all source"
+                    disabled={!source}
+                    onClick={copySource}
+                  >
+                    <Copy size={15} />
+                  </button>
+                  <button
+                    className="icon-button"
+                    title="Clear formulas"
+                    aria-label="Clear formulas"
+                    disabled={!source}
                     onClick={() => {
-                      setCategory(item);
-                      setSearch('');
+                      commit({ text: '', start: 0, end: 0 });
+                      notify('Cleared. You can undo this.');
                     }}
                   >
-                    {item}
+                    <Trash2 size={15} />
                   </button>
-                ))}
+                </div>
               </div>
-              <div className="symbol-grid" aria-label="Symbol palette">
-                {shownSymbols.map((item) => (
+              <div className="source-editor">
+                <MathEditor
+                  ref={editor}
+                  initialSource={initial.text}
+                  onChange={(snapshot) => {
+                    sourceRef.current = snapshot.text;
+                    setSource(snapshot.text);
+                    setCursor(snapshot.start);
+                    setEditorState(snapshot);
+                  }}
+                  onCompositionChange={setComposing}
+                  diagnostics={editorDiagnostics}
+                />
+              </div>
+              <div className="editor-meta">
+                <span id="editor-hint">
+                  <span className="hint-symbol">↵</span> Enter for a new line · Blank line for a new
+                  cell
+                </span>
+                <span>{source.length} characters</span>
+              </div>
+
+              <details
+                className="symbols-panel"
+                open={symbolsOpen}
+                onToggle={(event) => setSymbolsOpen(event.currentTarget.open)}
+              >
+                <summary className="symbols-heading">
+                  <h3>At your fingertips</h3>
+                  <span>
+                    Math symbols <ChevronDown size={13} />
+                  </span>
+                </summary>
+                <div className="quick-symbols" aria-label="Common symbols">
+                  {QUICK_SYMBOLS.map((item) => (
+                    <button
+                      key={item.id}
+                      className="quick-symbol"
+                      onClick={() => insert(item)}
+                      title={`${item.name} · ${item.template.replaceAll(/\{\{|\}\}/g, '')}`}
+                      aria-label={`Insert ${item.name}`}
+                    >
+                      <span>{item.glyph}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="palette-search">
+                  <Search size={15} />
+                  <input
+                    aria-label="Search symbols"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Find a symbol…"
+                  />
+                  {search ? (
+                    <button
+                      className="icon-button"
+                      aria-label="Clear symbol search"
+                      onClick={() => setSearch('')}
+                    >
+                      <X size={14} />
+                    </button>
+                  ) : (
+                    <span className="search-hint">α → ∞</span>
+                  )}
+                </div>
+                <div className="category-tabs" aria-label="Symbol categories">
+                  {CATEGORIES.map((item) => (
+                    <button
+                      key={item}
+                      aria-pressed={category === item && !search}
+                      className={category === item && !search ? 'selected' : ''}
+                      onClick={() => {
+                        setCategory(item);
+                        setSearch('');
+                      }}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+                <div className="symbol-grid" aria-label="Symbol palette">
+                  {shownSymbols.map((item) => (
+                    <button
+                      className="symbol-button"
+                      key={item.id}
+                      onClick={() => insert(item)}
+                      aria-label={`Insert ${item.name}`}
+                      title={`${item.name} · ${item.template.replaceAll(/\{\{|\}\}/g, '')}`}
+                    >
+                      <span className="symbol-glyph">{item.glyph}</span>
+                      <span className="symbol-name">{item.name}</span>
+                    </button>
+                  ))}
+                  {!shownSymbols.length && (
+                    <div className="no-symbols">
+                      No symbols found. Try “root”, “alpha”, or “integral”.
+                    </div>
+                  )}
+                </div>
+              </details>
+            </section>
+
+            <section className="preview-panel panel" aria-labelledby="preview-title">
+              <div className="panel-heading">
+                <h2 id="preview-title">
+                  <span className="preview-icon">ƒ</span> Live preview
+                </h2>
+                <span className={`live-badge ${hasErrors ? 'has-errors' : ''}`}>
+                  <span />
+                  {renderer.state === 'loading'
+                    ? 'Warming up'
+                    : renderer.state === 'error'
+                      ? 'Paused'
+                      : pending
+                        ? 'Updating'
+                        : 'Live'}
+                </span>
+              </div>
+              <div className="preview-toolbar">
+                <span>
+                  {renderer.blocks.length} {renderer.blocks.length === 1 ? 'cell' : 'cells'}
+                  <span className="preview-toolbar-detail"> · Beautifully typeset</span>
+                </span>
+                <div className="zoom-controls">
                   <button
-                    className="symbol-button"
-                    key={item.id}
-                    onClick={() => insert(item)}
-                    aria-label={`Insert ${item.name}`}
-                    title={`${item.name} · ${item.template.replaceAll(/\{\{|\}\}/g, '')}`}
+                    className="icon-button"
+                    aria-label="Zoom out"
+                    title="Zoom out"
+                    disabled={zoom <= 0.6}
+                    onClick={() => setZoom((value) => Math.max(0.6, +(value - 0.1).toFixed(1)))}
                   >
-                    <span className="symbol-glyph">{item.glyph}</span>
-                    <span className="symbol-name">{item.name}</span>
+                    <Minus size={14} />
                   </button>
-                ))}
-                {!shownSymbols.length && (
-                  <div className="no-symbols">
-                    No symbols found. Try “root”, “alpha”, or “integral”.
+                  <button
+                    className="zoom-value"
+                    onClick={() => setZoom(1)}
+                    title="Reset zoom"
+                    aria-label="Reset zoom"
+                  >
+                    {Math.round(zoom * 100)}%
+                  </button>
+                  <button
+                    className="icon-button"
+                    aria-label="Zoom in"
+                    title="Zoom in"
+                    disabled={zoom >= 1.8}
+                    onClick={() => setZoom((value) => Math.min(1.8, +(value + 0.1).toFixed(1)))}
+                  >
+                    <Plus size={14} />
+                  </button>
+                  <span className="toolbar-separator" />
+                  <button
+                    className="icon-button"
+                    title="Reset zoom"
+                    aria-label="Reset preview size"
+                    onClick={() => setZoom(1)}
+                  >
+                    <Maximize2 size={14} />
+                  </button>
+                </div>
+              </div>
+              <div
+                className="preview-paper"
+                ref={previewPaper}
+                tabIndex={0}
+                role="region"
+                aria-label="Rendered formulas"
+              >
+                {renderer.state === 'error' && (
+                  <div className="renderer-message" role="alert">
+                    <AlertCircle size={20} />
+                    <p>{renderer.error}</p>
+                    <button className="small-button" onClick={renderer.retry}>
+                      <RotateCcw size={14} /> Retry renderer
+                    </button>
                   </div>
                 )}
-              </div>
-            </details>
-          </section>
-
-          <section className="preview-panel panel" aria-labelledby="preview-title">
-            <div className="panel-heading">
-              <h2 id="preview-title">
-                <span className="preview-icon">ƒ</span> Live preview
-              </h2>
-              <span className={`live-badge ${hasErrors ? 'has-errors' : ''}`}>
-                <span />
-                {renderer.state === 'loading'
-                  ? 'Warming up'
-                  : renderer.state === 'error'
-                    ? 'Paused'
-                    : pending
-                      ? 'Updating'
-                      : 'Live'}
-              </span>
-            </div>
-            <div className="preview-toolbar">
-              <span>
-                {renderer.blocks.length} {renderer.blocks.length === 1 ? 'cell' : 'cells'}
-                <span className="preview-toolbar-detail"> · Beautifully typeset</span>
-              </span>
-              <div className="zoom-controls">
-                <button
-                  className="icon-button"
-                  aria-label="Zoom out"
-                  title="Zoom out"
-                  disabled={zoom <= 0.6}
-                  onClick={() => setZoom((value) => Math.max(0.6, +(value - 0.1).toFixed(1)))}
-                >
-                  <Minus size={14} />
-                </button>
-                <button
-                  className="zoom-value"
-                  onClick={() => setZoom(1)}
-                  title="Reset zoom"
-                  aria-label="Reset zoom"
-                >
-                  {Math.round(zoom * 100)}%
-                </button>
-                <button
-                  className="icon-button"
-                  aria-label="Zoom in"
-                  title="Zoom in"
-                  disabled={zoom >= 1.8}
-                  onClick={() => setZoom((value) => Math.min(1.8, +(value + 0.1).toFixed(1)))}
-                >
-                  <Plus size={14} />
-                </button>
-                <span className="toolbar-separator" />
-                <button
-                  className="icon-button"
-                  title="Reset zoom"
-                  aria-label="Reset preview size"
-                  onClick={() => setZoom(1)}
-                >
-                  <Maximize2 size={14} />
-                </button>
-              </div>
-            </div>
-            <div
-              className="preview-paper"
-              ref={previewPaper}
-              tabIndex={0}
-              role="region"
-              aria-label="Rendered formulas"
-            >
-              {renderer.state === 'error' && (
-                <div className="renderer-message" role="alert">
-                  <AlertCircle size={20} />
-                  <p>{renderer.error}</p>
-                  <button className="small-button" onClick={renderer.retry}>
-                    <RotateCcw size={14} /> Retry renderer
-                  </button>
-                </div>
-              )}
-              {renderer.state === 'loading' && (
-                <div className="loading-message" role="status">
-                  <LoaderCircle className="spin" size={17} />
-                  <span>
-                    Getting your math ready
-                    <span className="loading-detail">
-                      Loading the renderer once. Your typing stays right here.
+                {renderer.state === 'loading' && (
+                  <div className="loading-message" role="status">
+                    <LoaderCircle className="spin" size={17} />
+                    <span>
+                      Getting your math ready
+                      <span className="loading-detail">
+                        Loading the renderer once. Your typing stays right here.
+                      </span>
                     </span>
-                  </span>
-                </div>
-              )}
-              {!renderer.blocks.length && (
-                <div className="empty-preview">
-                  <span className="empty-formula">ƒ(x)</span>
-                  <h3>Every idea starts somewhere.</h3>
-                  <p>
-                    Write a formula on the left, or pick an example.
-                    <br />
-                    We’ll take care of the beautiful part.
-                  </p>
-                  <button className="small-button" onClick={() => setModal('examples')}>
-                    <FilePlus2 size={15} /> Explore examples
-                  </button>
-                </div>
-              )}
-              <div className="formula-list">
-                {renderer.blocks.map((block) => {
-                  const result = renderer.results.get(block.source);
-                  const problem = result?.diagnostics[0];
-                  return (
-                    <article
-                      className={`formula-card ${activeBlock?.id === block.id ? 'active' : ''} ${problem ? 'formula-error' : ''}`}
-                      key={block.id}
-                      data-testid="formula-card"
-                      data-block-id={block.id}
-                    >
-                      <div className="formula-card-top">
-                        <span className="formula-number">
-                          {String(block.id + 1).padStart(2, '0')}
-                        </span>
-                        <button
-                          className="edit-formula"
-                          onClick={() => jumpToBlock(block)}
-                          aria-label={`Edit formula ${block.id + 1}`}
-                          title="Select source"
-                        >
-                          Edit source <ArrowDownLeft size={12} />
-                        </button>
-                      </div>
-                      {result?.svg ? (
-                        <div className="formula-scroll">
-                          <FormulaImage svg={result.svg} source={block.source} zoom={zoom} />
+                  </div>
+                )}
+                {!renderer.blocks.length && (
+                  <div className="empty-preview">
+                    <span className="empty-formula">ƒ(x)</span>
+                    <h3>Every idea starts somewhere.</h3>
+                    <p>
+                      Write a formula on the left, or pick an example.
+                      <br />
+                      We’ll take care of the beautiful part.
+                    </p>
+                    <button className="small-button" onClick={() => setModal('examples')}>
+                      <FilePlus2 size={15} /> Explore examples
+                    </button>
+                  </div>
+                )}
+                <div className="formula-list">
+                  {renderer.blocks.map((block) => {
+                    const result = renderer.results.get(block.source);
+                    const problem = result?.diagnostics[0];
+                    return (
+                      <article
+                        className={`formula-card ${activeBlock?.id === block.id ? 'active' : ''} ${problem ? 'formula-error' : ''}`}
+                        key={block.id}
+                        data-testid="formula-card"
+                        data-block-id={block.id}
+                      >
+                        <div className="formula-card-top">
+                          <span className="formula-number">
+                            {String(block.id + 1).padStart(2, '0')}
+                          </span>
+                          <button
+                            className="edit-formula"
+                            onClick={() => jumpToBlock(block)}
+                            aria-label={`Edit formula ${block.id + 1}`}
+                            title="Select source"
+                          >
+                            Edit source <ArrowDownLeft size={12} />
+                          </button>
                         </div>
-                      ) : problem ? (
-                        <div className="formula-diagnostic">
-                          <AlertCircle size={17} />
-                          <div>
-                            <p>{problem.message}</p>
-                            <button
-                              onClick={() =>
-                                jumpToBlock(block, diagnosticLine(problem.range, block))
-                              }
-                            >
-                              Check line {diagnosticLine(problem.range, block)}{' '}
-                              <ArrowRight size={12} />
-                            </button>
+                        {result?.svg ? (
+                          <div className="formula-scroll">
+                            <FormulaImage svg={result.svg} source={block.source} zoom={zoom} />
                           </div>
-                        </div>
-                      ) : (
-                        <div className="formula-placeholder">
-                          <span />
-                          <span />
-                          <span />
-                        </div>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-              {!!renderer.blocks.length && !pending && !hasErrors && renderer.state !== 'error' && (
-                <div className="preview-end">
-                  <span />
-                  <span className="end-diamond">◇</span>
-                  <span />
+                        ) : problem ? (
+                          <div className="formula-diagnostic">
+                            <AlertCircle size={17} />
+                            <div>
+                              <p>{problem.message}</p>
+                              <button
+                                onClick={() =>
+                                  jumpToBlock(block, diagnosticLine(problem.range, block))
+                                }
+                              >
+                                Check line {diagnosticLine(problem.range, block)}{' '}
+                                <ArrowRight size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="formula-placeholder">
+                            <span />
+                            <span />
+                            <span />
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
-            <div className="preview-footer">
-              <span className={`render-status ${hasErrors ? 'warning' : ''}`}>
-                {hasErrors ? <AlertCircle size={13} /> : <Check size={14} />}
-                {renderer.state === 'error'
-                  ? 'Preview unavailable'
-                  : renderer.state === 'loading'
-                    ? 'Preparing preview'
-                    : pending
-                      ? 'Rendering your formulas…'
-                      : hasErrors
-                        ? 'Check the highlighted formulas'
-                        : readyCount
-                          ? 'All formulas rendered'
-                          : 'Ready when you are'}
-              </span>
-              <span>Updates as you type</span>
-            </div>
-          </section>
-        </div>
+                {!!renderer.blocks.length &&
+                  !pending &&
+                  !hasErrors &&
+                  renderer.state !== 'error' && (
+                    <div className="preview-end">
+                      <span />
+                      <span className="end-diamond">◇</span>
+                      <span />
+                    </div>
+                  )}
+              </div>
+              <div className="preview-footer">
+                <span className={`render-status ${hasErrors ? 'warning' : ''}`}>
+                  {hasErrors ? <AlertCircle size={13} /> : <Check size={14} />}
+                  {renderer.state === 'error'
+                    ? 'Preview unavailable'
+                    : renderer.state === 'loading'
+                      ? 'Preparing preview'
+                      : pending
+                        ? 'Rendering your formulas…'
+                        : hasErrors
+                          ? 'Check the highlighted formulas'
+                          : readyCount
+                            ? 'All formulas rendered'
+                            : 'Ready when you are'}
+                </span>
+                <span>Updates as you type</span>
+              </div>
+            </section>
+          </div>
 
-        <div className="below-workspace">
-          <div className="friendly-tip">
-            <span className="tip-icon">
-              <CircleHelp size={15} />
-            </span>
-            <p>
-              A small tip: <code>sqrt(x)</code> makes a square root. <code>x^2</code> adds a power.
-              <button onClick={() => setModal('guide')}>
-                More shortcuts <ArrowRight size={13} />
-              </button>
-            </p>
+          <div className="below-workspace">
+            <div className="friendly-tip">
+              <span className="tip-icon">
+                <CircleHelp size={15} />
+              </span>
+              <p>
+                A small tip: <code>sqrt(x)</code> makes a square root. <code>x^2</code> adds a
+                power.
+                <button onClick={() => setModal('guide')}>
+                  More shortcuts <ArrowRight size={13} />
+                </button>
+              </p>
+            </div>
+            <div className={`save-status ${saveState === 'failed' ? 'warning' : ''}`}>
+              {saveState === 'failed' ? <AlertCircle size={13} /> : <Check size={13} />}
+              <span>
+                {saveState === 'saved'
+                  ? 'Draft saved in this browser'
+                  : saveState === 'saving'
+                    ? 'Saving draft…'
+                    : 'Draft could not be saved — copy it to keep it'}
+              </span>
+            </div>
           </div>
-          <div className={`save-status ${saveState === 'failed' ? 'warning' : ''}`}>
-            {saveState === 'failed' ? <AlertCircle size={13} /> : <Check size={13} />}
-            <span>
-              {saveState === 'saved'
-                ? 'Draft saved in this browser'
-                : saveState === 'saving'
-                  ? 'Saving draft…'
-                  : 'Draft could not be saved — copy it to keep it'}
-            </span>
-          </div>
+        </div>
+        <div className="plot-view" hidden={view !== 'plot'}>
+          <PlotView />
         </div>
       </main>
 

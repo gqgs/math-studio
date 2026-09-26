@@ -34,6 +34,14 @@ npm run preview
 
 The workspace fits the viewport. The editor and preview scroll independently, and the preview follows the cell being edited (or the approximate current line in a tall cell). The symbol palette can collapse; it starts collapsed on phones and short screens to leave room for editing.
 
+## Plotting formulas
+
+Choose **Plot formulas** to graph up to six expressions in `x`. Try `sin(x)`, `x^2`, or `cos(x) * exp(-x^2 / 10)`. Curves update as you type, with individual errors for invalid expressions. Adjust the x/y limits, zoom in or out, or reset the range.
+
+The plot uses numeric syntax: `+`, `-`, `*`, `/`, `^`, parentheses, `pi`, `e`, and the functions listed in the view. Optional `y =` prefixes are accepted. Multiplication needs `*`; trigonometric functions use radians, `ln` is natural logarithm, and `log` is base 10. Typst layout expressions are not evaluated by the plotter. All evaluation is local through a math-only parser.
+
+Plots are sampled approximations; very narrow features may be missed. Undefined values and detected discontinuities break the curve. Plot formulas and ranges survive switching views, but reset on reload; the writing draft retains its existing autosave behavior.
+
 ## Editor
 
 CodeMirror 6 provides undo history, selections, line numbers, bracket matching/closing, search/replace, and editing commands. A small math-mode tokenizer highlights raw Typst math directly; it is not a complete Typst parser. The existing compiler supplies line-level inline errors, so diagnostics match the bundled Typst version.

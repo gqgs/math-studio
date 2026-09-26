@@ -1578,3 +1578,165 @@ main {
     scroll-behavior: auto !important;
   }
 }
+
+.view-switcher {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex: none;
+}
+.view-switcher button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 14px;
+  background: white;
+  font-size: 12px;
+}
+.view-switcher button[aria-pressed='true'] {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+.writing-view,
+.plot-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+[hidden] {
+  display: none !important;
+}
+.plot-workspace {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 14px;
+}
+.plot-controls,
+.plot-preview {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.plot-settings {
+  padding: 0 18px 18px;
+  overflow: auto;
+}
+.plot-help {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.plot-settings h2 {
+  font-size: 13px;
+  margin: 22px 0 12px;
+}
+.plot-formula {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 28px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.plot-formula label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.plot-settings input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #bbc9b2;
+  background: #fffefb;
+  color: #28392f;
+  border-radius: 5px;
+  padding: 9px 7px;
+  font-size: 14px;
+}
+.plot-settings input[aria-invalid='true'] {
+  border-color: #aa4525;
+}
+.plot-error {
+  grid-column: 1 / -1;
+  color: #993918;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+.plot-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.plot-ranges {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.plot-ranges label {
+  font-size: 12px;
+}
+.plot-ranges input {
+  margin-top: 6px;
+}
+.plot-canvas {
+  flex: 1;
+  min-height: 0;
+  padding: 15px;
+  display: flex;
+}
+.plot-canvas svg {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.plot-canvas text {
+  fill: #52634c;
+  font:
+    13px Inter,
+    sans-serif;
+}
+.plot-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 18px;
+  font-size: 12px;
+  max-height: 100px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 800px) {
+  .plot-view {
+    overflow: auto;
+  }
+  .plot-workspace {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+    gap: 12px;
+  }
+  .plot-settings {
+    overflow: visible;
+  }
+  .plot-preview {
+    min-height: 330px;
+  }
+  .plot-canvas {
+    min-height: 260px;
+  }
+  .plot-settings input {
+    font-size: 16px;
+  }
+}
+
+.plot-controls .panel-heading h1 {
+  margin: 0;
+  font:
+    600 13px Inter,
+    sans-serif;
+  letter-spacing: normal;
+}
