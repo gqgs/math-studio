@@ -76,6 +76,8 @@ Serve `dist/` using any static host. All WASM modules and fonts are included loc
 
 For a subdirectory deployment, build with `npm run build -- --base=/math-studio/`. There is no service worker; a fresh page load still requires access to the static host.
 
+The GitHub Pages workflow builds this base path and deploys on pushes to `master` (or on manual dispatch). It publishes at `https://gqgs.github.io/math-studio/`.
+
 ## Verification
 
 ```sh
