@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDownLeft,
   ArrowRight,
@@ -22,6 +22,8 @@ import {
   AlertCircle,
   RotateCcw,
   LoaderCircle,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import {
   diagnosticLine,
@@ -68,6 +70,12 @@ function FormulaImage({ svg, source, zoom }: { svg: string; source: string; zoom
 export default function App() {
   const [view, setView] = useState<'write' | 'plot' | 'field'>('write');
   const [fieldOpened, setFieldOpened] = useState(false);
+  const [systemDark, setSystemDark] = useState(
+    () => window.matchMedia('(prefers-color-scheme: dark)').matches,
+  );
+  const [themeOverride, setThemeOverride] = useState<'light' | 'dark' | null>(null);
+  const dark = themeOverride ? themeOverride === 'dark' : systemDark;
+  const fieldFrame = useRef<HTMLIFrameElement>(null);
   const [initial] = useState(readDraft);
   const [source, setSource] = useState(initial.text);
   const editor = useRef<MathEditorHandle>(null);
@@ -115,6 +123,28 @@ export default function App() {
   );
   const pending = renderer.blocks.some((block) => !renderer.results.has(block.source));
   const activeSvg = activeBlock && renderer.results.get(activeBlock.source)?.svg;
+
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (event: MediaQueryListEvent) => setSystemDark(event.matches);
+    preference.addEventListener('change', onChange);
+    return () => preference.removeEventListener('change', onChange);
+  }, []);
+
+  function syncFieldTheme() {
+    fieldFrame.current?.contentWindow?.postMessage(
+      { type: 'math-studio:theme', theme: dark ? 'dark' : 'light' },
+      window.location.origin,
+    );
+  }
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', dark ? '#171d1b' : '#f7f7f2');
+    syncFieldTheme();
+  }, [dark, fieldOpened]);
 
   // Follow editing within the preview's own scroll area, without scrolling the page.
   useEffect(() => {
@@ -283,6 +313,14 @@ export default function App() {
           </button>
         </nav>
         <div className="header-right">
+          <button
+            className="icon-button theme-toggle"
+            aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+            title={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+            onClick={() => setThemeOverride(dark ? 'light' : 'dark')}
+          >
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
           <button
             className="text-button header-examples"
             aria-label="Start with an example"
@@ -674,9 +712,11 @@ export default function App() {
         <div className="field-view" hidden={view !== 'field'}>
           {fieldOpened && (
             <iframe
+              ref={fieldFrame}
               className="field-frame"
               title="Interactive vector field and phase portrait"
               src={`${import.meta.env.BASE_URL}pplane/index.html`}
+              onLoad={syncFieldTheme}
             />
           )}
         </div>

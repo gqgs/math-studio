@@ -10,7 +10,7 @@ import {
   type Bounds,
 } from './plot';
 
-const COLORS = ['#285d49', '#aa4525', '#6452a3', '#226b94', '#93600c', '#a33871'];
+const COLORS = Array.from({ length: 6 }, (_, index) => `var(--curve-${index + 1})`);
 const EXAMPLES = ['sin(x)', 'x^2', '1/x', 'sqrt(x)', 'cos(x) * exp(-x^2 / 10)'];
 
 export function PlotView() {
@@ -208,7 +208,7 @@ export function PlotView() {
                 <rect width={WIDTH} height={HEIGHT} />
               </clipPath>
             </defs>
-            <rect width={WIDTH} height={HEIGHT} fill="#fffefb" stroke="#dce3d3" />
+            <rect width={WIDTH} height={HEIGHT} fill="var(--plot-bg)" stroke="var(--plot-border)" />
             {ticks(display.xMin, display.xMax).map((x) => (
               <g key={`x${x}`}>
                 <line
@@ -216,7 +216,7 @@ export function PlotView() {
                   x2={sx(x)}
                   y1={0}
                   y2={HEIGHT}
-                  stroke={x === 0 ? '#7c8972' : '#e4e7de'}
+                  stroke={x === 0 ? 'var(--plot-axis)' : 'var(--plot-grid)'}
                 />
                 <text x={sx(x)} y={HEIGHT + 24} textAnchor="middle">
                   {x}
@@ -230,7 +230,7 @@ export function PlotView() {
                   x2={WIDTH}
                   y1={sy(y)}
                   y2={sy(y)}
-                  stroke={y === 0 ? '#7c8972' : '#e4e7de'}
+                  stroke={y === 0 ? 'var(--plot-axis)' : 'var(--plot-grid)'}
                 />
                 <text x={-10} y={sy(y) + 4} textAnchor="end">
                   {y}

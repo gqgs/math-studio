@@ -27,3 +27,9 @@ body.dark .constants-help{color:#9cab9f}
 .constant-row .constant-name{font-family:'Instrument Serif',serif;font-style:italic;font-size:23px;color:#287a5e;padding-top:3px;padding-bottom:3px}
 body.dark .equation-row>span,body.dark .constant-row .constant-name{color:#86cfa4}
 @media(max-width:700px){.sidebar{height:auto;overflow:visible;padding:16px 18px}.topbar{height:auto;min-height:76px;display:grid;grid-template-columns:minmax(0,1fr);gap:4px;padding:7px 15px}.topbar h1{font-size:17px}.top-actions{justify-content:space-between}.content{padding:12px 15px 24px}.canvas-wrap{height:450px;min-height:0}}
+body.dark .field-label,body.dark .equation-title,body.dark .setting-row strong{color:#d6e3d9}
+body.dark .setting-row small,body.dark .section-head,body.dark .slider-top span,body.dark .sidebar-bottom{color:#aab9ad}
+body.dark .text-button,body.dark .plot-tools button{color:#a8daba}
+body.dark .plot-tools button:hover{background:#334b3b;color:#d4f0d9}
+body.dark .remove-constant{color:#b4c5b7}
+body.dark .error{background:#44302d;color:#ffd0c3}

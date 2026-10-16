@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 test('vector field tab runs the bundled phase plane and preserves its state', async ({ page }) => {
   const errors: string[] = [];
@@ -202,4 +203,45 @@ test('every preset exposes adjustable coefficients with its original defaults', 
       .not.toBe(before);
     await expect(frame.locator('#error')).toBeHidden();
   }
+});
+
+test('one header theme follows the system and controls every workspace view', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.getByRole('button', { name: 'Switch to light theme' })).toBeVisible();
+  await page.getByRole('button', { name: 'Vector fields' }).click();
+  const frame = page.frameLocator('iframe[title="Interactive vector field and phase portrait"]');
+  await expect(frame.locator('body')).toHaveClass(/dark/);
+  await expect(frame.locator('#path-count')).toHaveText('5 paths');
+  await expect(frame.locator('#theme-button')).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/theme-field-dark.png' });
+  const darkCanvas = await frame
+    .locator('#plot')
+    .evaluate((canvas: HTMLCanvasElement) =>
+      Array.from(canvas.getContext('2d')!.getImageData(1, 1, 1, 1).data),
+    );
+
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(frame.locator('body')).not.toHaveClass(/dark/);
+  const lightCanvas = await frame.locator('#plot').evaluate(async (canvas: HTMLCanvasElement) => {
+    await new Promise(requestAnimationFrame);
+    return Array.from(canvas.getContext('2d')!.getImageData(1, 1, 1, 1).data);
+  });
+  expect(lightCanvas).not.toEqual(darkCanvas);
+
+  await page.getByRole('button', { name: 'Switch to dark theme' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(frame.locator('body')).toHaveClass(/dark/);
+  await page.getByRole('button', { name: 'Plot formulas', exact: true }).click();
+  await expect(page.locator('.plot-controls')).toHaveCSS('background-color', 'rgb(32, 40, 36)');
+  await page.getByRole('button', { name: 'Write formulas', exact: true }).click();
+  await expect(page.locator('.editor-panel')).toHaveCSS('background-color', 'rgb(32, 40, 36)');
+  await page.screenshot({ path: 'test-results/theme-dark.png' });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.getByRole('button', { name: 'Switch to light theme' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByRole('button', { name: 'Vector fields' }).click();
+  await expect(frame.locator('body')).not.toHaveClass(/dark/);
 });

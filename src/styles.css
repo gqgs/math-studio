@@ -11,6 +11,7 @@
   font-display: swap;
 }
 :root {
+  color-scheme: light;
   font-family:
     Inter,
     ui-sans-serif,
@@ -26,6 +27,16 @@
   --muted: #656e60;
   --line: #e4e7de;
   --soft: #f0f3eb;
+  --plot-bg: #fffefb;
+  --plot-border: #dce3d3;
+  --plot-grid: #e4e7de;
+  --plot-axis: #7c8972;
+  --curve-1: #285d49;
+  --curve-2: #aa4525;
+  --curve-3: #6452a3;
+  --curve-4: #226b94;
+  --curve-5: #93600c;
+  --curve-6: #a33871;
 }
 * {
   box-sizing: border-box;
@@ -1823,4 +1834,243 @@ main {
     width: 27px;
     height: 29px;
   }
+}
+
+.theme-toggle {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  flex: none;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  color: #e5eee6;
+  background: #171d1b;
+  --green: #94d1ad;
+  --muted: #a8b7ab;
+  --line: #35433a;
+  --soft: #28362c;
+  --plot-bg: #1d2521;
+  --plot-border: #415448;
+  --plot-grid: #2d3b32;
+  --plot-axis: #758c7b;
+  --curve-1: #9fe2ad;
+  --curve-2: #f0a684;
+  --curve-3: #c9a9f1;
+  --curve-4: #8dccf0;
+  --curve-5: #eac078;
+  --curve-6: #efa6c8;
+}
+:root[data-theme='dark'] .brand-mark {
+  background: #36765b;
+}
+:root[data-theme='dark'] .brand-dot,
+:root[data-theme='dark'] .eyebrow,
+:root[data-theme='dark'] h1 em {
+  color: #a2d8ad;
+}
+:root[data-theme='dark'] .view-switcher button,
+:root[data-theme='dark'] .examples-button,
+:root[data-theme='dark'] .small-button {
+  background: #25312a;
+  border-color: #3a4d3e;
+  color: #dce9dd;
+}
+:root[data-theme='dark'] .view-switcher button[aria-pressed='true'] {
+  background: #36765b;
+  border-color: #36765b;
+  color: white;
+}
+:root[data-theme='dark'] .panel,
+:root[data-theme='dark'] .app-dialog {
+  background: #202824;
+  border-color: #3a493e;
+  color: #e5eee6;
+}
+:root[data-theme='dark'] .panel-heading h2 svg,
+:root[data-theme='dark'] .preview-icon,
+:root[data-theme='dark'] .tip-icon {
+  color: #add5b3;
+}
+:root[data-theme='dark'] .language-tag,
+:root[data-theme='dark'] .live-badge,
+:root[data-theme='dark'] .friendly-tip code {
+  background: #2b3c30;
+  border-color: #3b5140;
+  color: #bde3c2;
+}
+:root[data-theme='dark'] .editor-toolbar,
+:root[data-theme='dark'] .preview-toolbar,
+:root[data-theme='dark'] .preview-footer {
+  background: #222c26;
+  border-color: var(--line);
+}
+:root[data-theme='dark'] .source-editor,
+:root[data-theme='dark'] .math-editor .cm-editor,
+:root[data-theme='dark'] .math-editor .cm-scroller {
+  background: #202824;
+  color: #e5eee6;
+}
+:root[data-theme='dark'] .math-editor .cm-gutters,
+:root[data-theme='dark'] .math-editor .cm-search {
+  background: #1c241f;
+  color: #9dad9f;
+  border-color: var(--line);
+}
+:root[data-theme='dark'] .math-editor .cm-activeLine,
+:root[data-theme='dark'] .math-editor .cm-activeLineGutter {
+  background: #2a382d;
+}
+:root[data-theme='dark'] .math-editor .cm-cursor {
+  border-left-color: #d8eedc;
+}
+:root[data-theme='dark'] .math-editor .cm-selectionBackground,
+:root[data-theme='dark'] .math-editor .cm-focused .cm-selectionBackground {
+  background: #42634a !important;
+}
+:root[data-theme='dark'] .math-editor .cm-search input,
+:root[data-theme='dark'] .math-editor .cm-search button {
+  background: #2a382e;
+  color: #e5eee6;
+  border-color: var(--line);
+}
+:root[data-theme='dark'] .math-editor .math-function {
+  color: #94dcaf;
+}
+:root[data-theme='dark'] .math-editor .math-symbol,
+:root[data-theme='dark'] .math-editor .math-keyword {
+  color: #c7a9e8;
+}
+:root[data-theme='dark'] .math-editor .math-number {
+  color: #efbf89;
+}
+:root[data-theme='dark'] .math-editor .math-string {
+  color: #e8a9bc;
+}
+:root[data-theme='dark'] .math-editor .math-comment {
+  color: #a6b5a5;
+}
+:root[data-theme='dark'] .math-editor .math-operator,
+:root[data-theme='dark'] .math-editor .math-bracket {
+  color: #bfd3c2;
+}
+:root[data-theme='dark'] .symbols-panel {
+  background: #1e2821;
+}
+:root[data-theme='dark'] .quick-symbol,
+:root[data-theme='dark'] .symbol-button,
+:root[data-theme='dark'] .palette-search,
+:root[data-theme='dark'] .example-item {
+  background: #27342b;
+  border-color: #3b4d3f;
+  color: #dbeadd;
+}
+:root[data-theme='dark'] .palette-search input,
+:root[data-theme='dark'] .plot-settings input {
+  color: #e5eee6;
+}
+:root[data-theme='dark'] .category-tabs button.selected,
+:root[data-theme='dark'] .quick-symbol:hover,
+:root[data-theme='dark'] .symbol-button:hover,
+:root[data-theme='dark'] .example-item:hover {
+  background: #334936;
+  color: #e5f4e8;
+}
+:root[data-theme='dark'] .preview-paper {
+  background-color: #1a211d;
+  background-image: radial-gradient(#5b715c66 0.7px, transparent 0.7px);
+}
+:root[data-theme='dark'] .formula-card {
+  background: #26332b;
+  border-color: #3b5140;
+}
+:root[data-theme='dark'] .formula-card.active {
+  border-color: #87b394;
+  box-shadow: 0 0 0 2px #3b5943;
+}
+:root[data-theme='dark'] .formula-card.formula-error,
+:root[data-theme='dark'] .renderer-message {
+  background: #392d26;
+  border-color: #795c40;
+  color: #f2cc9c;
+}
+:root[data-theme='dark'] .formula-image {
+  filter: invert(1) hue-rotate(180deg);
+}
+:root[data-theme='dark'] .loading-message {
+  background: #2b3b2e;
+  border-color: #426047;
+  color: #c4e4c8;
+}
+:root[data-theme='dark'] .plot-settings input {
+  background: #27342b;
+  border-color: #4b6451;
+}
+:root[data-theme='dark'] .plot-canvas text {
+  fill: #b4c9b7;
+}
+:root[data-theme='dark'] .app-dialog::backdrop {
+  background: #060b09bb;
+}
+:root[data-theme='dark'] .guide-table,
+:root[data-theme='dark'] .guide-table > div,
+:root[data-theme='dark'] .example-item {
+  border-color: var(--line);
+}
+:root[data-theme='dark'] .guide-table > div:first-child {
+  background: #2b3d30;
+  color: #d3e7d4;
+}
+:root[data-theme='dark'] .field-frame {
+  border-color: #3a493e;
+  background: #171d1b;
+}
+:root[data-theme='dark'] .icon-button:not(:disabled):hover,
+:root[data-theme='dark'] .small-button:hover,
+:root[data-theme='dark'] .examples-button:hover {
+  background: #334936;
+}
+:root[data-theme='dark'] .language-tag,
+:root[data-theme='dark'] .toolbar-caption,
+:root[data-theme='dark'] .editor-meta,
+:root[data-theme='dark'] .hint-symbol,
+:root[data-theme='dark'] .symbols-heading > span,
+:root[data-theme='dark'] .category-tabs button,
+:root[data-theme='dark'] .search-hint,
+:root[data-theme='dark'] .no-symbols,
+:root[data-theme='dark'] .symbol-name,
+:root[data-theme='dark'] .formula-number,
+:root[data-theme='dark'] .edit-formula,
+:root[data-theme='dark'] .preview-toolbar,
+:root[data-theme='dark'] .preview-toolbar-detail,
+:root[data-theme='dark'] .preview-footer,
+:root[data-theme='dark'] .zoom-value,
+:root[data-theme='dark'] .render-status,
+:root[data-theme='dark'] .empty-preview,
+:root[data-theme='dark'] .empty-formula,
+:root[data-theme='dark'] .empty-preview h3,
+:root[data-theme='dark'] .loading-detail,
+:root[data-theme='dark'] .friendly-tip,
+:root[data-theme='dark'] .friendly-tip button,
+:root[data-theme='dark'] .save-status,
+:root[data-theme='dark'] .site-footer,
+:root[data-theme='dark'] .dialog-intro,
+:root[data-theme='dark'] .example-item span,
+:root[data-theme='dark'] .example-item code,
+:root[data-theme='dark'] .guide-table code,
+:root[data-theme='dark'] .guide-note {
+  color: #afc0b1;
+}
+:root[data-theme='dark'] .icon-button,
+:root[data-theme='dark'] .palette-search input::placeholder {
+  color: #bdcdbf;
+}
+:root[data-theme='dark'] .plot-error,
+:root[data-theme='dark'] .formula-diagnostic,
+:root[data-theme='dark'] .formula-diagnostic button {
+  color: #ffbd9b;
+}
+:root[data-theme='dark'] .warning {
+  color: #f1c797 !important;
 }
