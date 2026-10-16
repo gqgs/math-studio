@@ -66,7 +66,8 @@ function FormulaImage({ svg, source, zoom }: { svg: string; source: string; zoom
 }
 
 export default function App() {
-  const [view, setView] = useState<'write' | 'plot'>('write');
+  const [view, setView] = useState<'write' | 'plot' | 'field'>('write');
+  const [fieldOpened, setFieldOpened] = useState(false);
   const [initial] = useState(readDraft);
   const [source, setSource] = useState(initial.text);
   const editor = useRef<MathEditorHandle>(null);
@@ -270,6 +271,15 @@ export default function App() {
           </button>
           <button aria-pressed={view === 'plot'} onClick={() => setView('plot')}>
             Plot formulas
+          </button>
+          <button
+            aria-pressed={view === 'field'}
+            onClick={() => {
+              setFieldOpened(true);
+              setView('field');
+            }}
+          >
+            Vector fields
           </button>
         </nav>
         <div className="header-right">
@@ -660,6 +670,15 @@ export default function App() {
         </div>
         <div className="plot-view" hidden={view !== 'plot'}>
           <PlotView />
+        </div>
+        <div className="field-view" hidden={view !== 'field'}>
+          {fieldOpened && (
+            <iframe
+              className="field-frame"
+              title="Interactive vector field and phase portrait"
+              src={`${import.meta.env.BASE_URL}pplane/index.html`}
+            />
+          )}
         </div>
       </main>
 

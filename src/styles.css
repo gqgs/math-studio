@@ -1598,7 +1598,8 @@ main {
   color: white;
 }
 .writing-view,
-.plot-view {
+.plot-view,
+.field-view {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -1606,6 +1607,15 @@ main {
 }
 [hidden] {
   display: none !important;
+}
+.field-frame {
+  display: block;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid #dde2d7;
+  border-radius: 10px;
+  background: #f8f7f3;
 }
 .plot-workspace {
   display: grid;
@@ -1790,6 +1800,13 @@ main {
   .site-header .view-switcher {
     grid-row: 2;
     grid-column: 1 / -1;
+    width: 100%;
+  }
+  .site-header .view-switcher button {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 4px;
+    font-size: 11px;
   }
   .site-header .text-button {
     font-size: 11px;

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f8f7f3" />
+  <meta name="description" content="A calm, interactive space to explore phase portraits and dynamical systems." />
+  <title>Pplane — Explore the shape of motion</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span>pplane<span class="brand-dot">.</span></span></div>
+      <div class="sidebar-intro"><div class="eyebrow">A LITTLE MATHEMATICAL PLAYGROUND</div><h1>See how<br /><em>systems move.</em></h1><p>Shape a vector field, then drop a point to watch its path unfold.</p></div>
+      <div class="section-head"><span>01 / SYSTEM</span><button class="text-button" id="reset-button" type="button">Reset</button></div>
+      <label class="field-label" for="preset">Start with a system</label>
+      <div class="select-wrap"><select id="preset"><option value="pendulum">Damped pendulum</option><option value="spiral">Spiral sink</option><option value="predator">Predator & prey</option><option value="vanderpol">Van der Pol oscillator</option><option value="custom">Custom system</option></select><span aria-hidden="true">⌄</span></div>
+      <div class="equation-card"><div class="equation-title">Differential equations <span class="info-dot" title="Use x, y, numbers, +, −, *, /, ^, parentheses, and functions like sin, cos, exp, sqrt, abs.">?</span></div><label class="equation-row"><span>ẋ <small>=</small></span><input id="dx" spellcheck="false" aria-label="x derivative" value="y" /></label><label class="equation-row"><span>ẏ <small>=</small></span><input id="dy" spellcheck="false" aria-label="y derivative" value="-sin(x) - 0.35*y" /></label></div>
+      <div id="error" class="error" role="alert" hidden></div>
+      <div class="section-head section-gap"><span>02 / DISPLAY</span></div>
+      <div class="setting-row"><div><strong>Direction field</strong><small>Show the flow at every point</small></div><label class="switch"><input id="show-field" type="checkbox" checked /><span></span></label></div>
+      <div class="setting-row"><div><strong>Nullclines</strong><small>Where motion pauses on an axis</small></div><label class="switch"><input id="show-nullclines" type="checkbox" /><span></span></label></div>
+      <div class="setting-row"><div><strong>Grid lines</strong><small>A little spatial context</small></div><label class="switch"><input id="show-grid" type="checkbox" checked /><span></span></label></div>
+      <div class="slider-top"><label for="density">Field density</label><span id="density-value">19 × 19</span></div><input id="density" type="range" min="11" max="29" step="2" value="19" />
+      <div class="sidebar-bottom"><span class="tiny-sparkle">✳</span><span>Made for curious minds.<br />Click anywhere on the canvas to begin.</span></div>
+    </aside>
+    <main class="workspace">
+      <header class="topbar"><div class="breadcrumb">Workspace <span>/</span> Phase portrait</div><div class="top-actions"><span class="live-badge"><i></i> LIVE VIEW</span><button type="button" class="icon-button" id="theme-button" title="Toggle dark mode" aria-label="Toggle dark mode">◐</button></div></header>
+      <div class="content"><div class="plot-heading"><div><div class="eyebrow">THE PHASE PLANE</div><h2 id="plot-title">Damped pendulum</h2><p id="plot-description">A pendulum gradually coming to rest. Each curve traces one possible journey.</p></div><button class="outline-button" id="clear-button" type="button"><span aria-hidden="true">↺</span> Clear paths</button></div>
+        <div class="plot-card"><div class="plot-toolbar"><div class="plot-tabs"><span class="active-tab">Phase portrait</span><span class="tab-divider"></span><span id="system-type">Nonlinear system</span></div><div class="plot-tools"><button type="button" id="zoom-out" title="Zoom out" aria-label="Zoom out">−</button><button type="button" id="zoom-in" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="fit-button" title="Reset view" aria-label="Reset view">⤢</button><span class="tool-separator"></span><button type="button" id="download-button" title="Download PNG" aria-label="Download PNG">↓</button></div></div><div class="canvas-wrap"><canvas id="plot" aria-label="Interactive phase portrait. Click to add a trajectory."></canvas><div class="axis-label axis-y">y</div><div class="axis-label axis-x">x</div><div class="canvas-hint" id="canvas-hint"><span>✳</span> Click anywhere to draw a trajectory</div><div class="coordinate" id="coordinate">x 0.00 · y 0.00</div></div><div class="plot-footer"><div class="legend"><span><i class="legend-line trajectory"></i> Trajectories</span><span><i class="legend-line field"></i> Direction field</span><span id="nullcline-legend" hidden><i class="legend-line nullcline"></i> Nullclines</span></div><span id="path-count">0 paths</span></div></div>
+        <div class="below-grid"><div class="tip-card"><div class="tip-icon">↗</div><div><strong>Follow the flow</strong><p>Every arrow shows the direction of change. Add a starting point to see where the system goes.</p></div></div><div class="tip-card"><div class="tip-icon">◎</div><div><strong>Make it yours</strong><p>Edit the equations or try a preset. Your canvas responds as you type.</p></div></div></div>
+      </div>
+    </main>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -42,6 +42,12 @@ The plot uses numeric syntax: `+`, `-`, `*`, `/`, `^`, parentheses, `pi`, `e`, a
 
 Plots are sampled approximations; very narrow features may be missed. Undefined values and detected discontinuities break the curve. Plot formulas and ranges survive switching views, but reset on reload; the writing draft retains its existing autosave behavior.
 
+## Vector fields
+
+Choose **Vector fields** to explore phase portraits with the bundled pplane app. Pick a preset or enter equations for ẋ and ẏ, then click the canvas to trace a trajectory. You can show the direction field, nullclines, and grid; change field density; zoom; clear paths; and download the canvas as a PNG. The phase portrait stays in place when you switch tabs, but resets on reload.
+
+Pplane is copied into `public/pplane/` and served with Math Studio. Its equation syntax is numeric, with `x`, `y`, standard math functions, and explicit multiplication such as `2*x`. The bundled copy uses a local Inter font so this tab makes no font service requests.
+
 ## Editor
 
 CodeMirror 6 provides undo history, selections, line numbers, bracket matching/closing, search/replace, and editing commands. A small math-mode tokenizer highlights raw Typst math directly; it is not a complete Typst parser. The existing compiler supplies line-level inline errors, so diagnostics match the bundled Typst version.
