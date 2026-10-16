@@ -122,3 +122,84 @@ test('named constants drive the Selkov field and validate edits', async ({ page 
   await expect(frame.locator('#error')).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+test('every preset exposes adjustable coefficients with its original defaults', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Vector fields' }).click();
+  const frame = page.frameLocator('iframe[title="Interactive vector field and phase portrait"]');
+  await expect(frame.locator('#path-count')).toHaveText('5 paths');
+  const canvas = frame.locator('#plot');
+  const presets = [
+    {
+      key: 'pendulum',
+      dx: 'y',
+      dy: '-g*sin(x) - d*y',
+      names: ['g', 'd'],
+      values: ['1', '0.35'],
+      changed: '1.4',
+    },
+    {
+      key: 'spiral',
+      dx: '-a*x - b*y',
+      dy: 'b*x - a*y',
+      names: ['a', 'b'],
+      values: ['0.28', '1'],
+      changed: '0.5',
+    },
+    {
+      key: 'predator',
+      dx: 'a*x - b*x*y',
+      dy: 'c*x*y - d*y',
+      names: ['a', 'b', 'c', 'd'],
+      values: ['1', '1', '1', '1'],
+      changed: '1.5',
+    },
+    {
+      key: 'vanderpol',
+      dx: 'y',
+      dy: 'mu*(1-x^2)*y-x',
+      names: ['mu'],
+      values: ['1.4'],
+      changed: '2',
+    },
+    {
+      key: 'selkov',
+      dx: '-x + a*y + x^2*y',
+      dy: 'b - a*y - x^2*y',
+      names: ['a', 'b'],
+      values: ['0.1', '0.5'],
+      changed: '0.2',
+    },
+  ];
+  for (const preset of presets) {
+    await frame.locator('#preset').selectOption(preset.key);
+    await expect(frame.locator('#dx')).toHaveValue(preset.dx);
+    await expect(frame.locator('#dy')).toHaveValue(preset.dy);
+    await expect
+      .poll(() =>
+        frame
+          .locator('.constant-name')
+          .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value)),
+      )
+      .toEqual(preset.names);
+    await expect
+      .poll(() =>
+        frame
+          .locator('.constant-value')
+          .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value)),
+      )
+      .toEqual(preset.values);
+    await expect(frame.locator('#error')).toBeHidden();
+    const before = await canvas.evaluate(async (element: HTMLCanvasElement) => {
+      await new Promise(requestAnimationFrame);
+      return element.toDataURL();
+    });
+    await frame.locator('.constant-value').first().fill(preset.changed);
+    await expect
+      .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()))
+      .not.toBe(before);
+    await expect(frame.locator('#error')).toBeHidden();
+  }
+});
