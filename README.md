@@ -44,7 +44,9 @@ Plots are sampled approximations; very narrow features may be missed. Undefined 
 
 ## Vector fields
 
-Choose **Vector fields** to explore phase portraits with the bundled pplane app. Pick a preset or enter equations for ẋ and ẏ, then click the canvas to trace a trajectory. You can show the direction field, nullclines, and grid; change field density; zoom; clear paths; and download the canvas as a PNG. The phase portrait stays in place when you switch tabs, but resets on reload.
+Choose **Vector fields** to explore phase portraits with the bundled pplane app. Pick a preset or enter equations for ẋ and ẏ, then click the canvas to trace a trajectory. Add named constants beneath the equations to adjust parameters without rewriting them. The Selkov preset uses `a` and `b` in `ẋ = -x + a*y + x^2*y` and `ẏ = b - a*y - x^2*y`; changing either value redraws the field and trajectories. Constant names must start with a letter and be distinct from `x`, `y`, and math function names. Values must be finite numbers.
+
+You can show the direction field, nullclines, and grid; change field density; zoom; clear paths; and download the canvas as a PNG. The phase portrait and constants stay in place when you switch tabs, but reset on reload.
 
 Pplane is copied into `public/pplane/` and served with Math Studio. Its equation syntax is numeric, with `x`, `y`, standard math functions, and explicit multiplication such as `2*x`. The bundled copy uses a local Inter font so this tab makes no font service requests.
 

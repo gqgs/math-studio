@@ -4,22 +4,49 @@ const presets = {
   pendulum:{title:'Damped pendulum',description:'A pendulum gradually coming to rest. Each curve traces one possible journey.',dx:'y',dy:'-sin(x) - 0.35*y',view:{xmin:-7,xmax:7,ymin:-3.8,ymax:3.8},seeds:[[-5,2.5],[-3.1,2.8],[4.8,2.1],[-5.8,-1.8],[2.1,-2.7]]},
   spiral:{title:'Spiral sink',description:'Every path circles inward, finding its way to a quiet center.',dx:'-0.28*x - y',dy:'x - 0.28*y',view:{xmin:-5,xmax:5,ymin:-3.8,ymax:3.8},seeds:[[3.8,2],[2,-3],[-3.5,1.8],[-2,-2.7],[0.5,3.2]]},
   predator:{title:'Predator & prey',description:'Two populations move together in an endlessly changing balance.',dx:'x*(1-y)',dy:'y*(x-1)',view:{xmin:-.3,xmax:3.3,ymin:-.3,ymax:3.3},seeds:[[.35,.65],[.65,.35],[1.8,1.7],[2.3,.8],[.7,2.1]]},
-  vanderpol:{title:'Van der Pol oscillator',description:'Different starting points are drawn toward the same repeating cycle.',dx:'y',dy:'1.4*(1-x^2)*y-x',view:{xmin:-3.8,xmax:3.8,ymin:-3.3,ymax:3.3},seeds:[[.2,.2],[3,2],[-3,-2],[.8,3],[-2.5,1.7]]}
+  vanderpol:{title:'Van der Pol oscillator',description:'Different starting points are drawn toward the same repeating cycle.',dx:'y',dy:'1.4*(1-x^2)*y-x',view:{xmin:-3.8,xmax:3.8,ymin:-3.3,ymax:3.3},seeds:[[.2,.2],[3,2],[-3,-2],[.8,3],[-2.5,1.7]]},
+  selkov:{title:'Selkov model',description:'A two-variable reaction model. Adjust a and b to see the flow change.',dx:'-x + a*y + x^2*y',dy:'b - a*y - x^2*y',constants:[['a','0.1'],['b','0.5']],view:{xmin:-.3,xmax:2.5,ymin:-.3,ymax:3.5},seeds:[[.2,.7],[.5,1],[.8,1.8],[1.4,2.2],[1.8,.5]]}
 };
-let current='pendulum', view={...presets.pendulum.view}, paths=[...presets.pendulum.seeds], functions=null, size={w:0,h:0}, hover=null, drawPending=false;
+let current='pendulum', lastPreset='pendulum', view={...presets.pendulum.view}, paths=[...presets.pendulum.seeds], functions=null, size={w:0,h:0}, hover=null, drawPending=false;
 const mathNames=['sin','cos','tan','asin','acos','atan','sinh','cosh','tanh','exp','log','sqrt','abs','pow','min','max','floor','ceil','round','PI','E'];
-function compile(expression){
+const reservedNames=new Set(['x','y',...mathNames,'arguments','eval','await','break','case','catch','class','const','continue','debugger','default','delete','do','else','export','extends','false','finally','for','function','if','import','in','instanceof','let','new','null','return','static','super','switch','this','throw','true','try','typeof','var','void','while','with','yield']);
+let nextConstantId=1;
+function addConstant(name, value){
+  const id=nextConstantId++, row=document.createElement('div');row.className='constant-row';row.dataset.id=id;
+  const nameInput=document.createElement('input');nameInput.className='constant-name';nameInput.type='text';nameInput.value=name;nameInput.placeholder='name';nameInput.autocomplete='off';nameInput.spellcheck=false;nameInput.setAttribute('aria-label',`Constant ${id} name`);
+  const equals=document.createElement('span');equals.textContent='=';equals.setAttribute('aria-hidden','true');
+  const valueInput=document.createElement('input');valueInput.className='constant-value';valueInput.type='number';valueInput.step='any';valueInput.value=value;valueInput.placeholder='value';valueInput.setAttribute('aria-label',`Constant ${id} value`);
+  const remove=document.createElement('button');remove.type='button';remove.className='remove-constant';remove.textContent='×';remove.title='Remove constant';remove.setAttribute('aria-label',`Remove constant ${id}`);
+  nameInput.addEventListener('input',updateEquations);valueInput.addEventListener('input',updateEquations);
+  remove.addEventListener('click',()=>{row.remove();updateEquations()});
+  row.append(nameInput,equals,valueInput,remove);$('constants').append(row);
+  return nameInput;
+}
+function readConstants(){
+  const values=Object.create(null);
+  for(const row of $('constants').children){
+    const name=row.querySelector('.constant-name').value.trim(), raw=row.querySelector('.constant-value').value.trim();
+    if(!/^[A-Za-z][A-Za-z_0-9]*$/.test(name))throw Error('Constant names must start with a letter and contain only letters, numbers, or underscores.');
+    if(reservedNames.has(name))throw Error(`“${name}” is reserved. Choose another constant name.`);
+    if(Object.hasOwn(values,name))throw Error(`The constant “${name}” is defined more than once.`);
+    if(!raw||!Number.isFinite(Number(raw)))throw Error(`Enter a finite number for “${name}”.`);
+    values[name]=Number(raw);
+  }
+  return values;
+}
+function compile(expression,constants){
   const source=expression.trim().replaceAll('π','PI').replaceAll('^','**');
   if(!source || /[^\d\s\w.+\-*/(),]/.test(source)) throw Error('Use numbers, x, y, operators, parentheses, and supported math functions.');
   const words=source.match(/[A-Za-z_][A-Za-z_0-9]*/g)||[];
-  if(words.some(w=>!['x','y',...mathNames].includes(w))) throw Error('Unknown name in equation. Use x, y, sin, cos, exp, sqrt, and other math functions.');
+  if(words.some(w=>!['x','y',...mathNames,...Object.keys(constants)].includes(w))) throw Error('Unknown name in equation. Add constants below, or use x, y, and supported math functions.');
   const declarations=mathNames.map(n=>`const ${n}=Math.${n};`).join('');
-  let fn;try{fn=new Function('x','y',`"use strict";${declarations}return (${source});`);fn(0.37,0.51)}catch{throw Error('Check the equation syntax. Multiplication needs * (for example, 2*x).')}
-  return (x,y)=>{const v=fn(x,y);return Number.isFinite(v)?v:NaN};
+  const names=Object.keys(constants), values=Object.values(constants);
+  let fn;try{fn=new Function('x','y',...names,`"use strict";${declarations}return (${source});`);fn(.37,.51,...values)}catch{throw Error('Check the equation syntax. Multiplication needs * (for example, 2*x).')}
+  return (x,y)=>{const v=fn(x,y,...values);return Number.isFinite(v)?v:NaN};
 }
-function updateEquations(){try{const dx=compile($('dx').value),dy=compile($('dy').value);functions={dx,dy};$('error').hidden=true;requestDraw()}catch(e){$('error').textContent=e.message;$('error').hidden=false}}
-function setPreset(key){if(key==='custom')return;const p=presets[key];current=key;$('dx').value=p.dx;$('dy').value=p.dy;view={...p.view};paths=[...p.seeds];$('plot-title').textContent=p.title;$('plot-description').textContent=p.description;$('system-type').textContent=key==='spiral'?'Linear system':'Nonlinear system';$('canvas-hint').style.display='none';updateEquations();updatePathCount()}
-function reset(){const key=current==='custom'?'pendulum':current;$('preset').value=key;setPreset(key)}
+function updateEquations(){try{const constants=readConstants(),dx=compile($('dx').value,constants),dy=compile($('dy').value,constants);functions={dx,dy};$('error').hidden=true}catch(e){functions=null;$('error').textContent=e.message;$('error').hidden=false}requestDraw()}
+function setPreset(key){if(key==='custom')return;const p=presets[key];current=key;lastPreset=key;$('dx').value=p.dx;$('dy').value=p.dy;$('constants').replaceChildren();for(const [name,value] of p.constants||[])addConstant(name,value);view={...p.view};paths=[...p.seeds];$('plot-title').textContent=p.title;$('canvas-hint').style.display='none';updateEquations();updatePathCount()}
+function reset(){const key=current==='custom'?lastPreset:current;$('preset').value=key;setPreset(key)}
 function requestDraw(){if(drawPending)return;drawPending=true;requestAnimationFrame(()=>{drawPending=false;draw()})}
 function resize(){const r=canvas.getBoundingClientRect(),d=window.devicePixelRatio||1;size={w:r.width,h:r.height};canvas.width=Math.round(r.width*d);canvas.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);requestDraw()}
 const sx=x=>(x-view.xmin)/(view.xmax-view.xmin)*size.w,sy=y=>size.h-(y-view.ymin)/(view.ymax-view.ymin)*size.h;
@@ -36,4 +63,5 @@ function drawPaths(c){if(!functions)return;ctx.save();ctx.beginPath();ctx.rect(0
 function draw(){if(!size.w||!size.h)return;const c=colors();drawGrid(c);drawField(c);drawNullclines(c);drawPaths(c);$('nullcline-legend').hidden=!$('show-nullclines').checked}
 function updatePathCount(){$('path-count').textContent=`${paths.length} ${paths.length===1?'path':'paths'}`}
 function zoom(scale){const mx=(view.xmin+view.xmax)/2,my=(view.ymin+view.ymax)/2,rx=(view.xmax-view.xmin)*scale/2,ry=(view.ymax-view.ymin)*scale/2;view={xmin:mx-rx,xmax:mx+rx,ymin:my-ry,ymax:my+ry};requestDraw()}
-$('preset').addEventListener('change',e=>setPreset(e.target.value));for(const id of ['dx','dy'])$(id).addEventListener('input',()=>{current='custom';$('preset').value='custom';$('plot-title').textContent='Custom system';$('plot-description').textContent='A phase portrait shaped by your equations.';updateEquations()});for(const id of ['show-field','show-nullclines','show-grid','density'])$(id).addEventListener('input',()=>{$('density-value').textContent=`${$('density').value} × ${$('density').value}`;requestDraw()});$('clear-button').onclick=()=>{paths=[];updatePathCount();$('canvas-hint').style.display='block';requestDraw()};$('reset-button').onclick=reset;$('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);$('fit-button').onclick=()=>{view={...(presets[current]||presets.pendulum).view};requestDraw()};$('theme-button').onclick=()=>{document.body.classList.toggle('dark');requestDraw()};$('download-button').onclick=()=>{const a=document.createElement('a');a.download='pplane-phase-portrait.png';a.href=canvas.toDataURL('image/png');a.click()};canvas.addEventListener('click',e=>{if(!functions)return;const r=canvas.getBoundingClientRect();paths.push([wx(e.clientX-r.left),wy(e.clientY-r.top)]);$('canvas-hint').style.display='none';updatePathCount();requestDraw()});canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();$('coordinate').textContent=`x ${wx(e.clientX-r.left).toFixed(2)} · y ${wy(e.clientY-r.top).toFixed(2)}`});new ResizeObserver(resize).observe(canvas);updateEquations();updatePathCount();
+$('add-constant').onclick=()=>{const used=new Set([...$('constants').querySelectorAll('.constant-name')].map(input=>input.value.trim()));let name='a';for(const candidate of 'abcdefghijklmnopqrstuvwxyz'){if(!used.has(candidate)&&!reservedNames.has(candidate)){name=candidate;break}}if(used.has(name)){let index=1;while(used.has(`c${index}`))index++;name=`c${index}`}const input=addConstant(name,'1');updateEquations();input.focus();input.select()};
+$('preset').addEventListener('change',e=>setPreset(e.target.value));for(const id of ['dx','dy'])$(id).addEventListener('input',()=>{current='custom';$('preset').value='custom';$('plot-title').textContent='Custom system';updateEquations()});for(const id of ['show-field','show-nullclines','show-grid','density'])$(id).addEventListener('input',()=>{$('density-value').textContent=`${$('density').value} × ${$('density').value}`;requestDraw()});$('clear-button').onclick=()=>{paths=[];updatePathCount();$('canvas-hint').style.display='block';requestDraw()};$('reset-button').onclick=reset;$('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);$('fit-button').onclick=()=>{view={...(presets[current]||presets[lastPreset]).view};requestDraw()};$('theme-button').onclick=()=>{document.body.classList.toggle('dark');requestDraw()};$('download-button').onclick=()=>{const a=document.createElement('a');a.download='pplane-phase-portrait.png';a.href=canvas.toDataURL('image/png');a.click()};canvas.addEventListener('click',e=>{if(!functions)return;const r=canvas.getBoundingClientRect();paths.push([wx(e.clientX-r.left),wy(e.clientY-r.top)]);$('canvas-hint').style.display='none';updatePathCount();requestDraw()});canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();$('coordinate').textContent=`x ${wx(e.clientX-r.left).toFixed(2)} · y ${wy(e.clientY-r.top).toFixed(2)}`});new ResizeObserver(resize).observe(canvas);updateEquations();updatePathCount();
