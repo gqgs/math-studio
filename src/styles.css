@@ -96,9 +96,9 @@ button:not(:disabled):hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 1440px;
+  max-width: none;
   margin: auto;
-  padding: 0 5.4%;
+  padding: 0 clamp(16px, 2vw, 40px);
 }
 .brand {
   display: flex;
@@ -155,8 +155,8 @@ button:not(:disabled):hover {
   color: #306f51;
 }
 main {
-  max-width: 1440px;
-  padding: 45px 5.4% 0;
+  max-width: none;
+  padding: 45px clamp(16px, 2vw, 40px) 0;
   margin: auto;
 }
 .intro {
@@ -784,10 +784,10 @@ h1 + p {
   white-space: nowrap;
 }
 .site-footer {
-  max-width: 1440px;
+  max-width: none;
   margin: 0 auto;
   border-top: 1px solid var(--line);
-  padding: 20px 5.4% 28px;
+  padding: 20px clamp(16px, 2vw, 40px) 28px;
   display: flex;
   justify-content: space-between;
   color: #616759;
