@@ -7,6 +7,8 @@ export interface FormulaBlock {
   contentStartLine: number;
 }
 
+const isCommentLine = (line: string) => /^\s*\/\//.test(line);
+
 /** Blank lines separate cells; single newlines remain inside each cell. */
 export function splitFormulas(input: string): FormulaBlock[] {
   const blocks: FormulaBlock[] = [];
@@ -23,6 +25,7 @@ export function splitFormulas(input: string): FormulaBlock[] {
       contentOffset += 1 + inner.length - inner.trimStart().length;
       source = inner.trim();
     }
+    if (source.split(/\r?\n/).every((line) => !line.trim() || isCommentLine(line))) return;
     blocks.push({
       id: blocks.length,
       source,
@@ -46,11 +49,18 @@ export const WRAPPER_LINES = PREAMBLE.split('\n').length - 1;
 export function formulaDocument(source: string) {
   // Prefix the next line so trailing comments cannot swallow the inserted break.
   // Preserve source line counts for diagnostics, and honor existing explicit breaks.
-  const lines = source.split(/\r?\n/);
-  const math = lines
-    .map((line, index) =>
-      index > 0 && !/\\\s*(?:\/\/.*)?$/.test(lines[index - 1]) ? '\\ ' + line : line,
-    )
+  let previousMathLine: string | undefined;
+  const math = source
+    .split(/\r?\n/)
+    .map((line) => {
+      // Keep comments on their original lines for diagnostics, but do not give
+      // them visible breaks or let them hide a preceding explicit break.
+      if (isCommentLine(line)) return line;
+      const needsBreak =
+        previousMathLine !== undefined && !/\\\s*(?:\/\/.*)?$/.test(previousMathLine);
+      previousMathLine = line;
+      return needsBreak ? '\\ ' + line : line;
+    })
     .join('\n');
   return PREAMBLE + math + '\n$';
 }

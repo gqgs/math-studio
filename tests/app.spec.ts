@@ -46,6 +46,31 @@ test('renders real math locally and presents a complete desktop workspace', asyn
   await page.screenshot({ path: 'test-results/desktop.png', fullPage: true });
 });
 
+test('comment lines leave rendered formula dimensions unchanged', async ({ page }) => {
+  await page.goto('/');
+  const editor = page.getByRole('textbox', { name: 'Math formulas' });
+  const images = page.getByRole('img', { name: /^Formula:/ });
+  const dimensions = () =>
+    images.evaluateAll((elements) =>
+      elements.map((element) => {
+        const image = element as HTMLImageElement;
+        return [image.naturalWidth, image.naturalHeight];
+      }),
+    );
+  await editor.fill('6125 = 5^3 times 7^2\n\nx = 1\ny = 2');
+  await expect(images).toHaveCount(2);
+  await expect(page.getByText('All formulas rendered')).toBeVisible();
+  const original = await dimensions();
+  expect(original.every(([width, height]) => width > 0 && height > 0)).toBe(true);
+  await editor.fill(
+    '// 6125 / 5\n// 1225 / 5\n// 245 / 5\n6125 = 5^3 times 7^2\n// trailing\n\n// standalone\n\nx = 1\n// middle\ny = 2\n// last',
+  );
+  await expect(images.first()).toHaveAttribute('alt', /\/\/ 6125/);
+  await expect(page.getByText('All formulas rendered')).toBeVisible();
+  await expect(images).toHaveCount(2);
+  await expect.poll(dimensions).toEqual(original);
+});
+
 test('renders every bundled example and palette template', async ({ page }) => {
   await page.goto('/');
   const examples = EXAMPLES.map((item) => item.source);

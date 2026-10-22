@@ -10,6 +10,14 @@ import {
 import { SYMBOLS } from './symbols';
 
 describe('formula blocks', () => {
+  it('omits comment-only cells and preserves source positions', () => {
+    const blocks = splitFormulas('// note\n  // more\n\nx\n\n// comment\n\ny');
+    expect(blocks.map(({ id, source, startLine }) => ({ id, source, startLine }))).toEqual([
+      { id: 0, source: 'x', startLine: 4 },
+      { id: 1, source: 'y', startLine: 8 },
+    ]);
+    expect(splitFormulas('// only a comment')).toEqual([]);
+  });
   it('groups single newlines into cells and splits on whitespace-only blank lines', () => {
     const source = ' \n\nx = 1\ny = 2\n \t\n\nalpha + beta\n\n';
     const blocks = splitFormulas(source);
@@ -34,6 +42,18 @@ describe('formula blocks', () => {
 });
 
 describe('visible line breaks', () => {
+  it('ignores leading, intervening, and trailing comment lines without shifting diagnostics', () => {
+    const source = '// first\r\n  // second\r\nx\r\n// middle\r\ny\r\n// last';
+    expect(formulaDocument(source)).toBe(
+      PREAMBLE + '// first\n  // second\nx\n// middle\n\\ y\n// last\n$',
+    );
+    const block = splitFormulas(source)[0];
+    expect(diagnosticLine(`${WRAPPER_LINES + 4}:1`, block)).toBe(5);
+  });
+  it('honors explicit breaks across comment lines', () => {
+    const source = 'x \\ // note\n// middle\ny';
+    expect(formulaDocument(source)).toBe(PREAMBLE + source + '\n$');
+  });
   it('renders input newlines as math breaks without changing source line numbers', () => {
     expect(formulaDocument('x+2\r\ny+2')).toBe(PREAMBLE + 'x+2\n\\ y+2\n$');
   });
