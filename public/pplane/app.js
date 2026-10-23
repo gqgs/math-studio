@@ -54,7 +54,44 @@ const wx=px=>view.xmin+px/size.w*(view.xmax-view.xmin),wy=py=>view.ymax-py/size.
 function colors(){const s=getComputedStyle(document.body);return Object.fromEntries(['--plot','--grid','--axis','--field','--path','--orange'].map(k=>[k,s.getPropertyValue(k).trim()]))}
 function niceStep(span){const rough=span/8,base=10**Math.floor(Math.log10(rough));return [1,2,5,10].map(n=>n*base).find(n=>n>=rough)||base*10}
 function drawGrid(c){ctx.fillStyle=c['--plot'];ctx.fillRect(0,0,size.w,size.h);if(!$('show-grid').checked)return;const xstep=niceStep(view.xmax-view.xmin),ystep=niceStep(view.ymax-view.ymin);ctx.strokeStyle=c['--grid'];ctx.lineWidth=1;ctx.beginPath();for(let x=Math.ceil(view.xmin/xstep)*xstep;x<=view.xmax;x+=xstep){const px=sx(x);ctx.moveTo(px,0);ctx.lineTo(px,size.h)}for(let y=Math.ceil(view.ymin/ystep)*ystep;y<=view.ymax;y+=ystep){const py=sy(y);ctx.moveTo(0,py);ctx.lineTo(size.w,py)}ctx.stroke();ctx.strokeStyle=c['--axis'];ctx.beginPath();if(view.xmin<0&&view.xmax>0){ctx.moveTo(sx(0),0);ctx.lineTo(sx(0),size.h)}if(view.ymin<0&&view.ymax>0){ctx.moveTo(0,sy(0));ctx.lineTo(size.w,sy(0))}ctx.stroke();ctx.fillStyle='#a4b1a4';ctx.font='10px DM Mono, monospace';for(let x=Math.ceil(view.xmin/xstep)*xstep;x<=view.xmax;x+=xstep){if(Math.abs(x)<1e-8)continue;ctx.fillText(Number(x.toFixed(2)).toString(),sx(x)+4,Math.min(size.h-9,Math.max(16,sy(0)+15)))}for(let y=Math.ceil(view.ymin/ystep)*ystep;y<=view.ymax;y+=ystep){if(Math.abs(y)<1e-8)continue;ctx.fillText(Number(y.toFixed(2)).toString(),Math.min(size.w-28,Math.max(8,sx(0)+7)),sy(y)-5)}}
-function drawField(c){if(!$('show-field').checked||!functions)return;const n=+$('density').value,spacing=Math.min(size.w,size.h)/(n-1),cols=Math.ceil(size.w/spacing),rows=Math.ceil(size.h/spacing);ctx.strokeStyle=c['--field'];ctx.fillStyle=c['--field'];ctx.lineWidth=1.15;for(let i=0;i<=cols;i++)for(let j=0;j<=rows;j++){const px=(i+.45)*size.w/(cols+1),py=(j+.45)*size.h/(rows+1),x=wx(px),y=wy(py),vx=functions.dx(x,y),vy=functions.dy(x,y);if(!Number.isFinite(vx)||!Number.isFinite(vy))continue;const u=vx/(view.xmax-view.xmin)*size.w,v=-vy/(view.ymax-view.ymin)*size.h,len=Math.hypot(u,v);if(len<.0001)continue;const a=Math.min(12,Math.max(6,spacing*.33)),dx=u/len*a,dy=v/len*a;ctx.beginPath();ctx.moveTo(px-dx*.5,py-dy*.5);ctx.lineTo(px+dx*.5,py+dy*.5);ctx.stroke();const ex=px+dx*.5,ey=py+dy*.5,ang=Math.atan2(dy,dx);ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex-3.7*Math.cos(ang-.55),ey-3.7*Math.sin(ang-.55));ctx.lineTo(ex-3.7*Math.cos(ang+.55),ey-3.7*Math.sin(ang+.55));ctx.closePath();ctx.fill()}}
+function formatSpeed(v){return v===0?'0':v<.001?v.toExponential(2):Number(v.toPrecision(3)).toString()}
+function speedColor(magnitude,ceiling){
+  const t=ceiling<=0?0:Math.log1p(Math.min(magnitude,ceiling))/Math.log1p(ceiling);
+  const dark=document.body.classList.contains('dark');
+  return dark?`hsl(${210-45*t} 78% ${48+28*t}%)`:`hsl(${210-45*t} 85% ${41-23*t}%)`;
+}
+function drawField(c){
+  const legend=$('magnitude-legend');
+  legend.hidden=true;
+  if(!$('show-field').checked||!functions)return;
+  const n=+$('density').value,spacing=Math.min(size.w,size.h)/(n-1),cols=Math.ceil(size.w/spacing),rows=Math.ceil(size.h/spacing);
+  const samples=[];
+  for(let i=0;i<=cols;i++)for(let j=0;j<=rows;j++){
+    const px=(i+.45)*size.w/(cols+1),py=(j+.45)*size.h/(rows+1),x=wx(px),y=wy(py);
+    const vx=functions.dx(x,y),vy=functions.dy(x,y);
+    if(!Number.isFinite(vx)||!Number.isFinite(vy))continue;
+    const magnitude=Math.hypot(vx,vy),u=vx/(view.xmax-view.xmin)*size.w,v=-vy/(view.ymax-view.ymin)*size.h;
+    const len=Math.hypot(u,v);
+    if(!Number.isFinite(magnitude)||!Number.isFinite(len))continue;
+    samples.push({px,py,magnitude,u,v,len});
+  }
+  const colored=$('color-magnitude').checked;
+  const sorted=colored?samples.map(s=>s.magnitude).sort((x,y)=>x-y):[];
+  const ceiling=sorted.length?sorted[Math.ceil(sorted.length*.95)-1]:0;
+  if(colored){
+    legend.hidden=false;
+    legend.textContent=`Vector speed |F|: 0 – ${formatSpeed(ceiling)} (95th-percentile cap)`;
+  }
+  ctx.lineWidth=1.15;
+  for(const {px,py,magnitude,u,v,len} of samples){
+    if(len<.0001)continue;
+    ctx.strokeStyle=ctx.fillStyle=colored?speedColor(magnitude,ceiling):c['--field'];
+    const arm=Math.min(12,Math.max(6,spacing*.33)),dx=u/len*arm,dy=v/len*arm;
+    ctx.beginPath();ctx.moveTo(px-dx*.5,py-dy*.5);ctx.lineTo(px+dx*.5,py+dy*.5);ctx.stroke();
+    const ex=px+dx*.5,ey=py+dy*.5,ang=Math.atan2(dy,dx);
+    ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex-3.7*Math.cos(ang-.55),ey-3.7*Math.sin(ang-.55));ctx.lineTo(ex-3.7*Math.cos(ang+.55),ey-3.7*Math.sin(ang+.55));ctx.closePath();ctx.fill();
+  }
+}
 function drawNullclines(c){if(!$('show-nullclines').checked||!functions)return;const step=9,nx=Math.ceil(size.w/step),ny=Math.ceil(size.h/step);for(const [fn,color] of [[functions.dx,c['--orange']],[functions.dy,c['--path']]]){ctx.strokeStyle=color;ctx.lineWidth=1.7;ctx.globalAlpha=.8;ctx.beginPath();for(let i=0;i<nx;i++)for(let j=0;j<ny;j++){const x=i*step,y=j*step,v0=fn(wx(x),wy(y)),v1=fn(wx(x+step),wy(y)),v2=fn(wx(x+step),wy(y+step)),v3=fn(wx(x),wy(y+step));if([v0,v1,v2,v3].some(v=>!Number.isFinite(v)))continue;const edges=[];for(const [a,b,ax,ay,bx,by] of [[v0,v1,x,y,x+step,y],[v1,v2,x+step,y,x+step,y+step],[v2,v3,x+step,y+step,x,y+step],[v3,v0,x,y+step,x,y]]){if((a<0)!==(b<0)){const t=Math.abs(a)/(Math.abs(a)+Math.abs(b));edges.push([ax+(bx-ax)*t,ay+(by-ay)*t])}}if(edges.length>=2){ctx.moveTo(...edges[0]);ctx.lineTo(...edges[1])}if(edges.length===4){ctx.moveTo(...edges[2]);ctx.lineTo(...edges[3])}}ctx.stroke();ctx.globalAlpha=1}}
 function vector(x,y){return [functions.dx(x,y),functions.dy(x,y)]}
 function rk4(x,y,h){const a=vector(x,y),b=vector(x+h*a[0]/2,y+h*a[1]/2),c=vector(x+h*b[0]/2,y+h*b[1]/2),d=vector(x+h*c[0],y+h*c[1]);return [x+h*(a[0]+2*b[0]+2*c[0]+d[0])/6,y+h*(a[1]+2*b[1]+2*c[1]+d[1])/6]}
@@ -64,7 +101,7 @@ function draw(){if(!size.w||!size.h)return;const c=colors();drawGrid(c);drawFiel
 function updatePathCount(){$('path-count').textContent=`${paths.length} ${paths.length===1?'path':'paths'}`}
 function zoom(scale){const mx=(view.xmin+view.xmax)/2,my=(view.ymin+view.ymax)/2,rx=(view.xmax-view.xmin)*scale/2,ry=(view.ymax-view.ymin)*scale/2;view={xmin:mx-rx,xmax:mx+rx,ymin:my-ry,ymax:my+ry};requestDraw()}
 $('add-constant').onclick=()=>{const used=new Set([...$('constants').querySelectorAll('.constant-name')].map(input=>input.value.trim()));let name='a';for(const candidate of 'abcdefghijklmnopqrstuvwxyz'){if(!used.has(candidate)&&!reservedNames.has(candidate)){name=candidate;break}}if(used.has(name)){let index=1;while(used.has(`c${index}`))index++;name=`c${index}`}const input=addConstant(name,'1');updateEquations();input.focus();input.select()};
-$('preset').addEventListener('change',e=>setPreset(e.target.value));for(const id of ['dx','dy'])$(id).addEventListener('input',()=>{current='custom';$('preset').value='custom';$('plot-title').textContent='Custom system';updateEquations()});for(const id of ['show-field','show-nullclines','show-grid','density'])$(id).addEventListener('input',()=>{$('density-value').textContent=`${$('density').value} × ${$('density').value}`;requestDraw()});$('clear-button').onclick=()=>{paths=[];updatePathCount();$('canvas-hint').style.display='block';requestDraw()};$('reset-button').onclick=reset;$('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);$('fit-button').onclick=()=>{view={...(presets[current]||presets[lastPreset]).view};requestDraw()};$('download-button').onclick=()=>{const a=document.createElement('a');a.download='pplane-phase-portrait.png';a.href=canvas.toDataURL('image/png');a.click()};canvas.addEventListener('click',e=>{if(!functions)return;const r=canvas.getBoundingClientRect();paths.push([wx(e.clientX-r.left),wy(e.clientY-r.top)]);$('canvas-hint').style.display='none';updatePathCount();requestDraw()});canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();$('coordinate').textContent=`x ${wx(e.clientX-r.left).toFixed(2)} · y ${wy(e.clientY-r.top).toFixed(2)}`});new ResizeObserver(resize).observe(canvas);for(const [name,value] of presets.pendulum.constants)addConstant(name,value);updateEquations();updatePathCount();
+$('preset').addEventListener('change',e=>setPreset(e.target.value));for(const id of ['dx','dy'])$(id).addEventListener('input',()=>{current='custom';$('preset').value='custom';$('plot-title').textContent='Custom system';updateEquations()});for(const id of ['show-field','show-nullclines','show-grid','density','color-magnitude'])$(id).addEventListener('input',()=>{$('density-value').textContent=`${$('density').value} × ${$('density').value}`;requestDraw()});$('clear-button').onclick=()=>{paths=[];updatePathCount();$('canvas-hint').style.display='block';requestDraw()};$('reset-button').onclick=reset;$('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);$('fit-button').onclick=()=>{view={...(presets[current]||presets[lastPreset]).view};requestDraw()};$('download-button').onclick=()=>{const a=document.createElement('a');a.download='pplane-phase-portrait.png';a.href=canvas.toDataURL('image/png');a.click()};canvas.addEventListener('click',e=>{if(!functions)return;const r=canvas.getBoundingClientRect();paths.push([wx(e.clientX-r.left),wy(e.clientY-r.top)]);$('canvas-hint').style.display='none';updatePathCount();requestDraw()});canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();$('coordinate').textContent=`x ${wx(e.clientX-r.left).toFixed(2)} · y ${wy(e.clientY-r.top).toFixed(2)}`});new ResizeObserver(resize).observe(canvas);for(const [name,value] of presets.pendulum.constants)addConstant(name,value);updateEquations();updatePathCount();
 const systemTheme=window.matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(theme){document.body.classList.toggle('dark',theme==='dark');document.querySelector('meta[name="theme-color"]').content=theme==='dark'?'#171d1b':'#f8f7f3';requestDraw()}
 let initialTheme=systemTheme.matches?'dark':'light';
