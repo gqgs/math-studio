@@ -302,7 +302,7 @@ test('pendulum energy uses forward-time RK4 samples and synchronized cursor', as
   await expect(frame.locator('#energy-plot')).toBeVisible();
   type Sample={x:number;y:number;t:number;e:number};
   const read=()=>frame.locator('#plot').evaluate(()=>(
-    window as Window&{pplaneDiagnostics:()=>({g:number;d:number;samples:Sample[]}|null)}
+    window as unknown as {pplaneDiagnostics:()=>({g:number;d:number;samples:Sample[]}|null)}
   ).pplaneDiagnostics());
   let data=await read();
   expect(data).not.toBeNull();
