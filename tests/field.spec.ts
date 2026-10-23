@@ -245,3 +245,85 @@ test('one header theme follows the system and controls every workspace view', as
   await page.getByRole('button', { name: 'Vector fields' }).click();
   await expect(frame.locator('body')).not.toHaveClass(/dark/);
 });
+
+
+test('magnitude coloring reveals speed while preserving field toggles and numerical edge cases', async ({page})=>{
+  await page.goto('/');
+  await page.getByRole('button',{name:'Vector fields'}).click();
+  const frame=page.frameLocator('iframe[title="Interactive vector field and phase portrait"]');
+  const canvas=frame.locator('#plot');
+  const before=await canvas.evaluate((el:HTMLCanvasElement)=>el.toDataURL('image/png'));
+  await frame.locator('#color-magnitude').check();
+  await expect(frame.locator('#magnitude-legend')).toBeVisible();
+  await expect(frame.locator('#magnitude-legend')).toContainText('Vector speed |F|');
+  await expect.poll(()=>canvas.evaluate((el:HTMLCanvasElement)=>el.toDataURL('image/png'))).not.toBe(before);
+  await frame.locator('#show-field').uncheck();
+  await expect(frame.locator('#magnitude-legend')).toBeHidden();
+  await frame.locator('#show-field').check();
+  await expect(frame.locator('#magnitude-legend')).toBeVisible();
+
+  await frame.locator('#dx').fill('0');
+  await frame.locator('#dy').fill('0');
+  await expect(frame.locator('#error')).toBeHidden();
+  await expect(frame.locator('#magnitude-legend')).toContainText('0 – 0');
+  await frame.locator('#dx').fill('1');
+  await expect(frame.locator('#magnitude-legend')).toContainText('0 – 1');
+  await frame.locator('#dx').fill('unknown_name');
+  await expect(frame.locator('#magnitude-legend')).toBeHidden();
+});
+
+test('hover follows the cached forward/backward branches without breaking click-to-seed',async ({page})=>{
+  await page.goto('/');
+  await page.getByRole('button',{name:'Vector fields'}).click();
+  const frame=page.frameLocator('iframe[title="Interactive vector field and phase portrait"]');
+  const canvas=frame.locator('#plot');
+  const box=await canvas.boundingBox();
+  expect(box).not.toBeNull();
+  // Preset viewport: x∈[-7,7], y∈[-3.8,3.8]; first seed (-5,2.5).
+  await canvas.hover({position:{x:box!.width*(2/14),y:box!.height*(1.3/7.6)}});
+  await expect(frame.locator('#path-hover')).toBeVisible();
+  await expect(frame.locator('#path-hover')).toContainText('(-5, 2.5)');
+  await frame.locator('#plot-title').hover();
+  await expect(frame.locator('#path-hover')).toBeHidden();
+  await canvas.click({position:{x:box!.width*.65,y:box!.height*.65}});
+  await expect(frame.locator('#path-count')).toHaveText('6 paths');
+  await frame.getByRole('button',{name:'Clear paths'}).click();
+  await expect(frame.locator('#path-count')).toHaveText('0 paths');
+  await expect(frame.locator('#path-hover')).toBeHidden();
+});
+
+test('pendulum energy uses forward-time RK4 samples and synchronized cursor', async ({page})=>{
+  await page.goto('/');
+  await page.getByRole('button',{name:'Vector fields'}).click();
+  const frame=page.frameLocator('iframe[title="Interactive vector field and phase portrait"]');
+  const panel=frame.locator('#diagnostics-panel');
+  await expect(panel).toBeVisible();
+  await frame.locator('#diagnostics-panel summary').click();
+  await expect(frame.locator('#energy-plot')).toBeVisible();
+  type Sample={x:number;y:number;t:number;e:number};
+  const read=()=>frame.locator('#plot').evaluate(()=>(
+    window as Window&{pplaneDiagnostics:()=>({g:number;d:number;samples:Sample[]}|null)}
+  ).pplaneDiagnostics());
+  let data=await read();
+  expect(data).not.toBeNull();
+  expect(data!.samples.length).toBeGreaterThan(10);
+  expect(data!.d).toBeGreaterThan(0);
+  for(let i=1;i<data!.samples.length;i++){
+    expect(data!.samples[i].t).toBeGreaterThan(data!.samples[i-1].t);
+    expect(data!.samples[i].e).toBeLessThanOrEqual(data!.samples[i-1].e+1e-4);
+  }
+  const energy=frame.locator('#energy-plot'),r=await energy.boundingBox();
+  await energy.hover({position:{x:r!.width*.6,y:r!.height*.5}});
+  await expect(frame.locator('#energy-readout')).toContainText('t =');
+
+  const damping=frame.locator('.constant-row').nth(1).locator('.constant-value');
+  await damping.fill('0');
+  data=await read();
+  const levels=data!.samples.map(p=>p.e);
+  expect(Math.max(...levels)-Math.min(...levels)).toBeLessThan(1e-2);
+  await damping.fill('-0.3');
+  data=await read();
+  expect(data!.samples.at(-1)!.e).toBeGreaterThan(data!.samples[0].e);
+  await frame.locator('#dx').fill('-y');
+  await expect(panel).toBeHidden();
+});
