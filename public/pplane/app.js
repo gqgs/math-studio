@@ -11,6 +11,22 @@ let current='pendulum', lastPreset='pendulum', view={...presets.pendulum.view}, 
 const mathNames=['sin','cos','tan','asin','acos','atan','sinh','cosh','tanh','exp','log','sqrt','abs','pow','min','max','floor','ceil','round','PI','E'];
 const reservedNames=new Set(['x','y',...mathNames,'arguments','eval','await','break','case','catch','class','const','continue','debugger','default','delete','do','else','export','extends','false','finally','for','function','if','import','in','instanceof','let','new','null','return','static','super','switch','this','throw','true','try','typeof','var','void','while','with','yield']);
 let nextConstantId=1;
+// Integration belongs to an ODE/view revision; projection belongs to a canvas size.
+let curveCache=null,screenCache=null,hoverPointer=null,hoverQueued=false;
+function invalidateTraces(){curveCache=null;screenCache=null;hover=null;$('path-hover').hidden=true}
+function traceData(){
+  if(!functions)return [];
+  if(!curveCache)curveCache=paths.map(seed=>({seed,backward:trace(seed,-1),forward:trace(seed,1)}));
+  return curveCache;
+}
+function screenData(){
+  if(!screenCache)screenCache=traceData().map(curve=>({
+    backward:curve.backward.map(([x,y])=>[sx(x),sy(y)]),
+    forward:curve.forward.map(([x,y])=>[sx(x),sy(y)])
+  }));
+  return screenCache;
+}
+
 function addConstant(name, value){
   const id=nextConstantId++, row=document.createElement('div');row.className='constant-row';row.dataset.id=id;
   const nameInput=document.createElement('input');nameInput.className='constant-name';nameInput.type='text';nameInput.value=name;nameInput.placeholder='name';nameInput.autocomplete='off';nameInput.spellcheck=false;nameInput.setAttribute('aria-label',`Constant ${id} name`);
@@ -44,11 +60,11 @@ function compile(expression,constants){
   let fn;try{fn=new Function('x','y',...names,`"use strict";${declarations}return (${source});`);fn(.37,.51,...values)}catch{throw Error('Check the equation syntax. Multiplication needs * (for example, 2*x).')}
   return (x,y)=>{const v=fn(x,y,...values);return Number.isFinite(v)?v:NaN};
 }
-function updateEquations(){try{const constants=readConstants(),dx=compile($('dx').value,constants),dy=compile($('dy').value,constants);functions={dx,dy};$('error').hidden=true}catch(e){functions=null;$('error').textContent=e.message;$('error').hidden=false}requestDraw()}
+function updateEquations(){try{const constants=readConstants(),dx=compile($('dx').value,constants),dy=compile($('dy').value,constants);functions={dx,dy};$('error').hidden=true}catch(e){functions=null;$('error').textContent=e.message;$('error').hidden=false}invalidateTraces();requestDraw()}
 function setPreset(key){if(key==='custom')return;const p=presets[key];current=key;lastPreset=key;$('dx').value=p.dx;$('dy').value=p.dy;$('constants').replaceChildren();for(const [name,value] of p.constants||[])addConstant(name,value);view={...p.view};paths=[...p.seeds];$('plot-title').textContent=p.title;$('canvas-hint').style.display='none';updateEquations();updatePathCount()}
 function reset(){const key=current==='custom'?lastPreset:current;$('preset').value=key;setPreset(key)}
 function requestDraw(){if(drawPending)return;drawPending=true;requestAnimationFrame(()=>{drawPending=false;draw()})}
-function resize(){const r=canvas.getBoundingClientRect(),d=window.devicePixelRatio||1;size={w:r.width,h:r.height};canvas.width=Math.round(r.width*d);canvas.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);requestDraw()}
+function resize(){screenCache=null;const r=canvas.getBoundingClientRect(),d=window.devicePixelRatio||1;size={w:r.width,h:r.height};canvas.width=Math.round(r.width*d);canvas.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);requestDraw()}
 const sx=x=>(x-view.xmin)/(view.xmax-view.xmin)*size.w,sy=y=>size.h-(y-view.ymin)/(view.ymax-view.ymin)*size.h;
 const wx=px=>view.xmin+px/size.w*(view.xmax-view.xmin),wy=py=>view.ymax-py/size.h*(view.ymax-view.ymin);
 function colors(){const s=getComputedStyle(document.body);return Object.fromEntries(['--plot','--grid','--axis','--field','--path','--orange'].map(k=>[k,s.getPropertyValue(k).trim()]))}
@@ -95,13 +111,77 @@ function drawField(c){
 function drawNullclines(c){if(!$('show-nullclines').checked||!functions)return;const step=9,nx=Math.ceil(size.w/step),ny=Math.ceil(size.h/step);for(const [fn,color] of [[functions.dx,c['--orange']],[functions.dy,c['--path']]]){ctx.strokeStyle=color;ctx.lineWidth=1.7;ctx.globalAlpha=.8;ctx.beginPath();for(let i=0;i<nx;i++)for(let j=0;j<ny;j++){const x=i*step,y=j*step,v0=fn(wx(x),wy(y)),v1=fn(wx(x+step),wy(y)),v2=fn(wx(x+step),wy(y+step)),v3=fn(wx(x),wy(y+step));if([v0,v1,v2,v3].some(v=>!Number.isFinite(v)))continue;const edges=[];for(const [a,b,ax,ay,bx,by] of [[v0,v1,x,y,x+step,y],[v1,v2,x+step,y,x+step,y+step],[v2,v3,x+step,y+step,x,y+step],[v3,v0,x,y+step,x,y]]){if((a<0)!==(b<0)){const t=Math.abs(a)/(Math.abs(a)+Math.abs(b));edges.push([ax+(bx-ax)*t,ay+(by-ay)*t])}}if(edges.length>=2){ctx.moveTo(...edges[0]);ctx.lineTo(...edges[1])}if(edges.length===4){ctx.moveTo(...edges[2]);ctx.lineTo(...edges[3])}}ctx.stroke();ctx.globalAlpha=1}}
 function vector(x,y){return [functions.dx(x,y),functions.dy(x,y)]}
 function rk4(x,y,h){const a=vector(x,y),b=vector(x+h*a[0]/2,y+h*a[1]/2),c=vector(x+h*b[0]/2,y+h*b[1]/2),d=vector(x+h*c[0],y+h*c[1]);return [x+h*(a[0]+2*b[0]+2*c[0]+d[0])/6,y+h*(a[1]+2*b[1]+2*c[1]+d[1])/6]}
-function trace(seed,sign){let [x,y]=seed;const points=[[x,y]],span=Math.max(view.xmax-view.xmin,view.ymax-view.ymin),base=.035*sign;for(let i=0;i<2300;i++){const [vx,vy]=vector(x,y),speed=Math.hypot(vx/(view.xmax-view.xmin),vy/(view.ymax-view.ymin));if(!Number.isFinite(speed)||speed<.00005)break;const h=base/Math.max(1,speed*25);[x,y]=rk4(x,y,h);if(!Number.isFinite(x)||!Number.isFinite(y)||Math.abs(x)>span*100||Math.abs(y)>span*100)break;points.push([x,y]);if(x<view.xmin-span*.5||x>view.xmax+span*.5||y<view.ymin-span*.5||y>view.ymax+span*.5)break}return points}
-function drawPaths(c){if(!functions)return;ctx.save();ctx.beginPath();ctx.rect(0,0,size.w,size.h);ctx.clip();for(const seed of paths){for(const sign of [-1,1]){const pts=trace(seed,sign);if(pts.length<2)continue;ctx.strokeStyle=c['--path'];ctx.lineWidth=1.85;ctx.globalAlpha=sign===1?.9:.54;ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(sx(x),sy(y)):ctx.moveTo(sx(x),sy(y)));ctx.stroke()}ctx.globalAlpha=1;ctx.fillStyle=c['--plot'];ctx.strokeStyle=c['--path'];ctx.lineWidth=2;ctx.beginPath();ctx.arc(sx(seed[0]),sy(seed[1]),4.5,0,Math.PI*2);ctx.fill();ctx.stroke()}ctx.restore()}
+function trace(seed,sign){let [x,y]=seed,t=0;const points=[[x,y,t]],span=Math.max(view.xmax-view.xmin,view.ymax-view.ymin),base=.035*sign;for(let i=0;i<2300;i++){const [vx,vy]=vector(x,y),speed=Math.hypot(vx/(view.xmax-view.xmin),vy/(view.ymax-view.ymin));if(!Number.isFinite(speed)||speed<.00005)break;const h=base/Math.max(1,speed*25);[x,y]=rk4(x,y,h);if(!Number.isFinite(x)||!Number.isFinite(y)||Math.abs(x)>span*100||Math.abs(y)>span*100)break;t+=h;points.push([x,y,t]);if(x<view.xmin-span*.5||x>view.xmax+span*.5||y<view.ymin-span*.5||y>view.ymax+span*.5)break}return points}
+function drawPaths(c){
+  if(!functions)return;
+  const curves=traceData(),projected=screenData();
+  ctx.save();ctx.beginPath();ctx.rect(0,0,size.w,size.h);ctx.clip();
+  // Highlighted trajectory paints last, so other paths cannot hide it at crossings.
+  const order=curves.map((_,i)=>i).sort((a,b)=>Number(a===hover)-Number(b===hover));
+  for(const i of order){
+    for(const {key,alpha} of [{key:'backward',alpha:.54},{key:'forward',alpha:.9}]){
+      const pts=projected[i][key];
+      if(pts.length<2)continue;
+      ctx.strokeStyle=c['--path'];ctx.lineWidth=hover===i?3.2:1.85;
+      ctx.globalAlpha=hover!==null&&hover!==i?.15:alpha;
+      ctx.beginPath();pts.forEach(([px,py],index)=>index?ctx.lineTo(px,py):ctx.moveTo(px,py));ctx.stroke();
+    }
+    ctx.globalAlpha=hover!==null&&hover!==i?.25:1;
+    const [x,y]=curves[i].seed;
+    ctx.fillStyle=c['--plot'];ctx.strokeStyle=c['--path'];ctx.lineWidth=hover===i?3:2;
+    ctx.beginPath();ctx.arc(sx(x),sy(y),hover===i?6:4.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+  }
+  ctx.restore();
+}
+function pointSegmentDistance2(px,py,ax,ay,bx,by){
+  const dx=bx-ax,dy=by-ay,len2=dx*dx+dy*dy;
+  const t=len2>0?Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/len2)):0;
+  const ex=px-ax-t*dx,ey=py-ay-t*dy;
+  return ex*ex+ey*ey;
+}
+function nearestTrajectory(px,py){
+  const limit2=12*12,distances=[];
+  for(const curve of screenData()){
+    let nearest=Infinity;
+    for(const key of ['backward','forward']){
+      const pts=curve[key];
+      for(let j=1;j<pts.length;j++){
+        const [ax,ay]=pts[j-1],[bx,by]=pts[j];
+        if(px<Math.min(ax,bx)-12||px>Math.max(ax,bx)+12||py<Math.min(ay,by)-12||py>Math.max(ay,by)+12)continue;
+        nearest=Math.min(nearest,pointSegmentDistance2(px,py,ax,ay,bx,by));
+      }
+    }
+    distances.push(nearest);
+  }
+  let best=null,bestD=limit2;
+  for(let i=0;i<distances.length;i++)if(distances[i]<bestD){best=i;bestD=distances[i]}
+  // Two-pixel hysteresis retains an existing choice at an intersection.
+  if(hover!==null&&distances[hover]<limit2&&Math.sqrt(distances[hover])<=Math.sqrt(bestD)+2)return hover;
+  return best;
+}
+function updatePathHover(px,py){
+  const next=functions?nearestTrajectory(px,py):null;
+  if(hover===next)return;
+  hover=next;
+  $('path-hover').hidden=next===null;
+  if(next!==null){
+    const [x,y]=paths[next];
+    $('path-hover').textContent=`Initial condition: (${Number(x.toPrecision(4))}, ${Number(y.toPrecision(4))})`;
+  }
+  requestDraw();
+}
 function draw(){if(!size.w||!size.h)return;const c=colors();drawGrid(c);drawField(c);drawNullclines(c);drawPaths(c);$('nullcline-legend').hidden=!$('show-nullclines').checked}
 function updatePathCount(){$('path-count').textContent=`${paths.length} ${paths.length===1?'path':'paths'}`}
-function zoom(scale){const mx=(view.xmin+view.xmax)/2,my=(view.ymin+view.ymax)/2,rx=(view.xmax-view.xmin)*scale/2,ry=(view.ymax-view.ymin)*scale/2;view={xmin:mx-rx,xmax:mx+rx,ymin:my-ry,ymax:my+ry};requestDraw()}
+function zoom(scale){invalidateTraces();const mx=(view.xmin+view.xmax)/2,my=(view.ymin+view.ymax)/2,rx=(view.xmax-view.xmin)*scale/2,ry=(view.ymax-view.ymin)*scale/2;view={xmin:mx-rx,xmax:mx+rx,ymin:my-ry,ymax:my+ry};requestDraw()}
 $('add-constant').onclick=()=>{const used=new Set([...$('constants').querySelectorAll('.constant-name')].map(input=>input.value.trim()));let name='a';for(const candidate of 'abcdefghijklmnopqrstuvwxyz'){if(!used.has(candidate)&&!reservedNames.has(candidate)){name=candidate;break}}if(used.has(name)){let index=1;while(used.has(`c${index}`))index++;name=`c${index}`}const input=addConstant(name,'1');updateEquations();input.focus();input.select()};
-$('preset').addEventListener('change',e=>setPreset(e.target.value));for(const id of ['dx','dy'])$(id).addEventListener('input',()=>{current='custom';$('preset').value='custom';$('plot-title').textContent='Custom system';updateEquations()});for(const id of ['show-field','show-nullclines','show-grid','density','color-magnitude'])$(id).addEventListener('input',()=>{$('density-value').textContent=`${$('density').value} × ${$('density').value}`;requestDraw()});$('clear-button').onclick=()=>{paths=[];updatePathCount();$('canvas-hint').style.display='block';requestDraw()};$('reset-button').onclick=reset;$('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);$('fit-button').onclick=()=>{view={...(presets[current]||presets[lastPreset]).view};requestDraw()};$('download-button').onclick=()=>{const a=document.createElement('a');a.download='pplane-phase-portrait.png';a.href=canvas.toDataURL('image/png');a.click()};canvas.addEventListener('click',e=>{if(!functions)return;const r=canvas.getBoundingClientRect();paths.push([wx(e.clientX-r.left),wy(e.clientY-r.top)]);$('canvas-hint').style.display='none';updatePathCount();requestDraw()});canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();$('coordinate').textContent=`x ${wx(e.clientX-r.left).toFixed(2)} · y ${wy(e.clientY-r.top).toFixed(2)}`});new ResizeObserver(resize).observe(canvas);for(const [name,value] of presets.pendulum.constants)addConstant(name,value);updateEquations();updatePathCount();
+$('preset').addEventListener('change',e=>setPreset(e.target.value));for(const id of ['dx','dy'])$(id).addEventListener('input',()=>{current='custom';$('preset').value='custom';$('plot-title').textContent='Custom system';updateEquations()});for(const id of ['show-field','show-nullclines','show-grid','density','color-magnitude'])$(id).addEventListener('input',()=>{$('density-value').textContent=`${$('density').value} × ${$('density').value}`;requestDraw()});$('clear-button').onclick=()=>{paths=[];invalidateTraces();updatePathCount();$('canvas-hint').style.display='block';requestDraw()};$('reset-button').onclick=reset;$('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);$('fit-button').onclick=()=>{invalidateTraces();view={...(presets[current]||presets[lastPreset]).view};requestDraw()};$('download-button').onclick=()=>{const a=document.createElement('a');a.download='pplane-phase-portrait.png';a.href=canvas.toDataURL('image/png');a.click()};canvas.addEventListener('click',e=>{if(!functions)return;const r=canvas.getBoundingClientRect();paths.push([wx(e.clientX-r.left),wy(e.clientY-r.top)]);invalidateTraces();$('canvas-hint').style.display='none';updatePathCount();requestDraw()});canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top;
+  $('coordinate').textContent=`x ${wx(px).toFixed(2)} · y ${wy(py).toFixed(2)}`;
+  hoverPointer=[px,py];
+  if(!hoverQueued){hoverQueued=true;requestAnimationFrame(()=>{hoverQueued=false;if(hoverPointer)updatePathHover(...hoverPointer)})}
+});
+canvas.addEventListener('mouseleave',()=>{hoverPointer=null;if(hover!==null){hover=null;$('path-hover').hidden=true;requestDraw()}});
+new ResizeObserver(resize).observe(canvas);for(const [name,value] of presets.pendulum.constants)addConstant(name,value);updateEquations();updatePathCount();
 const systemTheme=window.matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(theme){document.body.classList.toggle('dark',theme==='dark');document.querySelector('meta[name="theme-color"]').content=theme==='dark'?'#171d1b':'#f8f7f3';requestDraw()}
 let initialTheme=systemTheme.matches?'dark':'light';
