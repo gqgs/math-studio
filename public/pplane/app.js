@@ -1,5 +1,6 @@
 const $ = id => document.getElementById(id);
 const canvas = $('plot'), ctx = canvas.getContext('2d');
+const energyCanvas=$('energy-plot'),energyCtx=energyCanvas.getContext('2d');
 const presets = {
   pendulum:{title:'Damped pendulum',description:'A pendulum gradually coming to rest. Each curve traces one possible journey.',dx:'y',dy:'-g*sin(x) - d*y',constants:[['g','1'],['d','0.35']],view:{xmin:-7,xmax:7,ymin:-3.8,ymax:3.8},seeds:[[-5,2.5],[-3.1,2.8],[4.8,2.1],[-5.8,-1.8],[2.1,-2.7]]},
   spiral:{title:'Spiral sink',description:'Every path circles inward, finding its way to a quiet center.',dx:'-a*x - b*y',dy:'b*x - a*y',constants:[['a','0.28'],['b','1']],view:{xmin:-5,xmax:5,ymin:-3.8,ymax:3.8},seeds:[[3.8,2],[2,-3],[-3.5,1.8],[-2,-2.7],[0.5,3.2]]},
@@ -12,8 +13,8 @@ const mathNames=['sin','cos','tan','asin','acos','atan','sinh','cosh','tanh','ex
 const reservedNames=new Set(['x','y',...mathNames,'arguments','eval','await','break','case','catch','class','const','continue','debugger','default','delete','do','else','export','extends','false','finally','for','function','if','import','in','instanceof','let','new','null','return','static','super','switch','this','throw','true','try','typeof','var','void','while','with','yield']);
 let nextConstantId=1;
 // Integration belongs to an ODE/view revision; projection belongs to a canvas size.
-let curveCache=null,screenCache=null,hoverPointer=null,hoverQueued=false;
-function invalidateTraces(){curveCache=null;screenCache=null;hover=null;$('path-hover').hidden=true}
+let curveCache=null,screenCache=null,hoverPointer=null,hoverQueued=false,selectedPath=0,energyCursor=null,energyPlotLayout=null;
+function invalidateTraces(){curveCache=null;screenCache=null;hover=null;energyCursor=null;$('path-hover').hidden=true}
 function traceData(){
   if(!functions)return [];
   if(!curveCache)curveCache=paths.map(seed=>({seed,backward:trace(seed,-1),forward:trace(seed,1)}));
@@ -60,7 +61,7 @@ function compile(expression,constants){
   let fn;try{fn=new Function('x','y',...names,`"use strict";${declarations}return (${source});`);fn(.37,.51,...values)}catch{throw Error('Check the equation syntax. Multiplication needs * (for example, 2*x).')}
   return (x,y)=>{const v=fn(x,y,...values);return Number.isFinite(v)?v:NaN};
 }
-function updateEquations(){try{const constants=readConstants(),dx=compile($('dx').value,constants),dy=compile($('dy').value,constants);functions={dx,dy};$('error').hidden=true}catch(e){functions=null;$('error').textContent=e.message;$('error').hidden=false}invalidateTraces();requestDraw()}
+function updateEquations(){try{const constants=readConstants(),dx=compile($('dx').value,constants),dy=compile($('dy').value,constants);functions={dx,dy};$('error').hidden=true}catch(e){functions=null;$('error').textContent=e.message;$('error').hidden=false}invalidateTraces();syncDiagnostics();requestDraw()}
 function setPreset(key){if(key==='custom')return;const p=presets[key];current=key;lastPreset=key;$('dx').value=p.dx;$('dy').value=p.dy;$('constants').replaceChildren();for(const [name,value] of p.constants||[])addConstant(name,value);view={...p.view};paths=[...p.seeds];$('plot-title').textContent=p.title;$('canvas-hint').style.display='none';updateEquations();updatePathCount()}
 function reset(){const key=current==='custom'?lastPreset:current;$('preset').value=key;setPreset(key)}
 function requestDraw(){if(drawPending)return;drawPending=true;requestAnimationFrame(()=>{drawPending=false;draw()})}
@@ -115,21 +116,22 @@ function trace(seed,sign){let [x,y]=seed,t=0;const points=[[x,y,t]],span=Math.ma
 function drawPaths(c){
   if(!functions)return;
   const curves=traceData(),projected=screenData();
+  const focus=hover??($('diagnostics-panel').open&&!$('diagnostics-panel').hidden?selectedPath:null);
   ctx.save();ctx.beginPath();ctx.rect(0,0,size.w,size.h);ctx.clip();
   // Highlighted trajectory paints last, so other paths cannot hide it at crossings.
-  const order=curves.map((_,i)=>i).sort((a,b)=>Number(a===hover)-Number(b===hover));
+  const order=curves.map((_,i)=>i).sort((a,b)=>Number(a===focus)-Number(b===focus));
   for(const i of order){
     for(const {key,alpha} of [{key:'backward',alpha:.54},{key:'forward',alpha:.9}]){
       const pts=projected[i][key];
       if(pts.length<2)continue;
-      ctx.strokeStyle=c['--path'];ctx.lineWidth=hover===i?3.2:1.85;
-      ctx.globalAlpha=hover!==null&&hover!==i?.15:alpha;
+      ctx.strokeStyle=c['--path'];ctx.lineWidth=focus===i?3.2:1.85;
+      ctx.globalAlpha=focus!==null&&focus!==i?.15:alpha;
       ctx.beginPath();pts.forEach(([px,py],index)=>index?ctx.lineTo(px,py):ctx.moveTo(px,py));ctx.stroke();
     }
-    ctx.globalAlpha=hover!==null&&hover!==i?.25:1;
+    ctx.globalAlpha=focus!==null&&focus!==i?.25:1;
     const [x,y]=curves[i].seed;
-    ctx.fillStyle=c['--plot'];ctx.strokeStyle=c['--path'];ctx.lineWidth=hover===i?3:2;
-    ctx.beginPath();ctx.arc(sx(x),sy(y),hover===i?6:4.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle=c['--plot'];ctx.strokeStyle=c['--path'];ctx.lineWidth=focus===i?3:2;
+    ctx.beginPath();ctx.arc(sx(x),sy(y),focus===i?6:4.5,0,Math.PI*2);ctx.fill();ctx.stroke();
   }
   ctx.restore();
 }
@@ -170,18 +172,113 @@ function updatePathHover(px,py){
   }
   requestDraw();
 }
-function draw(){if(!size.w||!size.h)return;const c=colors();drawGrid(c);drawField(c);drawNullclines(c);drawPaths(c);$('nullcline-legend').hidden=!$('show-nullclines').checked}
-function updatePathCount(){$('path-count').textContent=`${paths.length} ${paths.length===1?'path':'paths'}`}
+
+// The diagnostic consumes the *same* time-stamped forward RK4 samples used to draw the phase portrait.
+function energySeries(){
+  if(current!=='pendulum'||!functions||!paths.length)return null;
+  let coeffs;
+  try{coeffs=readConstants()}catch{return null}
+  const {g,d}=coeffs;
+  if(!Number.isFinite(g)||!Number.isFinite(d))return null;
+  const curve=traceData()[selectedPath];
+  if(!curve)return null;
+  return {g,d,samples:curve.forward.map(([x,y,t])=>({x,y,t,e:.5*y*y+g*(1-Math.cos(x))}))};
+}
+function syncDiagnostics(){
+  const panel=$('diagnostics-panel');
+  const valid=current==='pendulum'&&!!functions&&paths.length>0;
+  panel.hidden=!valid;
+  if(!valid){energyCursor=null;energyPlotLayout=null;return}
+  selectedPath=Math.min(selectedPath,paths.length-1);
+  const picker=$('diagnostic-seed'),value=String(selectedPath);
+  picker.replaceChildren(...paths.map(([x,y],i)=>{
+    const option=document.createElement('option');option.value=String(i);
+    option.textContent=`Path ${i+1}: (${Number(x.toPrecision(3))}, ${Number(y.toPrecision(3))})`;
+    return option;
+  }));
+  picker.value=value;
+}
+function drawEnergyMarker(){
+  if(energyCursor===null||$('diagnostics-panel').hidden||!$('diagnostics-panel').open)return;
+  const curve=traceData()[selectedPath];
+  if(!curve)return;
+  const point=curve.forward[energyCursor];
+  if(!point)return;
+  const [x,y]=point;
+  ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle='#c05838';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.arc(sx(x),sy(y),6,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();
+}
+function drawEnergyDiagnostics(){
+  const panel=$('diagnostics-panel');
+  if(panel.hidden||!panel.open){energyPlotLayout=null;return}
+  const series=energySeries(),data=series?.samples;
+  if(!data?.length)return;
+  const {width:w,height:h}=energyCanvas.getBoundingClientRect();
+  if(!w||!h)return;
+  const ratio=window.devicePixelRatio||1;
+  if(energyCanvas.width!==Math.round(w*ratio)||energyCanvas.height!==Math.round(h*ratio)){
+    energyCanvas.width=Math.round(w*ratio);energyCanvas.height=Math.round(h*ratio);
+  }
+  energyCtx.setTransform(ratio,0,0,ratio,0,0);
+  const style=getComputedStyle(document.body),dark=document.body.classList.contains('dark');
+  energyCtx.fillStyle=style.getPropertyValue('--plot').trim();energyCtx.fillRect(0,0,w,h);
+  const L=43,R=12,T=12,B=30,plotW=Math.max(1,w-L-R),plotH=Math.max(1,h-T-B);
+  const tMax=Math.max(1e-9,data.at(-1).t);
+  let emin=Math.min(...data.map(p=>p.e)),emax=Math.max(...data.map(p=>p.e));
+  const margin=Math.max(1e-5,(emax-emin)*.07);
+  emin-=margin;emax+=margin;
+  const ex=t=>L+t/tMax*plotW,ey=e=>T+(emax-e)/(emax-emin)*plotH;
+  energyCtx.strokeStyle=style.getPropertyValue('--axis').trim();energyCtx.lineWidth=1;
+  energyCtx.beginPath();energyCtx.moveTo(L,T);energyCtx.lineTo(L,T+plotH);energyCtx.lineTo(L+plotW,T+plotH);energyCtx.stroke();
+  energyCtx.fillStyle=style.getPropertyValue('--text').trim()|| (dark?'#eee':'#222');
+  energyCtx.font='11px sans-serif';energyCtx.fillText('E',8,20);energyCtx.fillText('t',w-11,h-10);
+  energyCtx.fillText(formatSpeed(Math.max(0,emax-margin)),4,T+8);
+  energyCtx.fillText('0',L-9,h-9);energyCtx.fillText(formatSpeed(tMax),Math.max(L,w-57),h-9);
+  energyCtx.strokeStyle=style.getPropertyValue('--path').trim();energyCtx.lineWidth=2;energyCtx.beginPath();
+  data.forEach((p,i)=>i?energyCtx.lineTo(ex(p.t),ey(p.e)):energyCtx.moveTo(ex(p.t),ey(p.e)));energyCtx.stroke();
+  energyPlotLayout={left:L,width:plotW,tMax};
+  if(energyCursor!==null){
+    const p=data[Math.min(energyCursor,data.length-1)];
+    energyCtx.strokeStyle=style.getPropertyValue('--orange').trim();energyCtx.beginPath();
+    energyCtx.moveTo(ex(p.t),T);energyCtx.lineTo(ex(p.t),T+plotH);energyCtx.stroke();
+    energyCtx.fillStyle='#c05838';energyCtx.beginPath();energyCtx.arc(ex(p.t),ey(p.e),4.5,0,Math.PI*2);energyCtx.fill();
+    $('energy-readout').textContent=`t = ${p.t.toFixed(2)} · E = ${p.e.toFixed(4)} · (x, y) = (${p.x.toFixed(2)}, ${p.y.toFixed(2)})`;
+  }else $('energy-readout').textContent=`E = ½y² + g(1 − cos x); dE/dt = −d y² (g=${series.g}, d=${series.d}). Hover to inspect time.`;
+}
+function inspectEnergy(event){
+  const layout=energyPlotLayout,series=energySeries();
+  if(!layout||!series?.samples.length)return;
+  const x=event.clientX-energyCanvas.getBoundingClientRect().left;
+  const t=Math.max(0,Math.min(1,(x-layout.left)/layout.width))*layout.tMax;
+  const data=series.samples;
+  let lo=0,hi=data.length-1;
+  while(lo<hi){const m=(lo+hi)>>1;if(data[m].t<t)lo=m+1;else hi=m}
+  const i=lo>0&&Math.abs(data[lo-1].t-t)<Math.abs(data[lo].t-t)?lo-1:lo;
+  if(energyCursor!==i){energyCursor=i;requestDraw()}
+}
+// Read-only diagnostic hook: lets regression tests verify analytic/numeric invariants.
+window.pplaneDiagnostics=()=>energySeries();
+
+function draw(){if(!size.w||!size.h)return;const c=colors();drawGrid(c);drawField(c);drawNullclines(c);drawPaths(c);drawEnergyMarker();drawEnergyDiagnostics();$('nullcline-legend').hidden=!$('show-nullclines').checked}
+function updatePathCount(){$('path-count').textContent=`${paths.length} ${paths.length===1?'path':'paths'}`;syncDiagnostics()}
 function zoom(scale){invalidateTraces();const mx=(view.xmin+view.xmax)/2,my=(view.ymin+view.ymax)/2,rx=(view.xmax-view.xmin)*scale/2,ry=(view.ymax-view.ymin)*scale/2;view={xmin:mx-rx,xmax:mx+rx,ymin:my-ry,ymax:my+ry};requestDraw()}
 $('add-constant').onclick=()=>{const used=new Set([...$('constants').querySelectorAll('.constant-name')].map(input=>input.value.trim()));let name='a';for(const candidate of 'abcdefghijklmnopqrstuvwxyz'){if(!used.has(candidate)&&!reservedNames.has(candidate)){name=candidate;break}}if(used.has(name)){let index=1;while(used.has(`c${index}`))index++;name=`c${index}`}const input=addConstant(name,'1');updateEquations();input.focus();input.select()};
-$('preset').addEventListener('change',e=>setPreset(e.target.value));for(const id of ['dx','dy'])$(id).addEventListener('input',()=>{current='custom';$('preset').value='custom';$('plot-title').textContent='Custom system';updateEquations()});for(const id of ['show-field','show-nullclines','show-grid','density','color-magnitude'])$(id).addEventListener('input',()=>{$('density-value').textContent=`${$('density').value} × ${$('density').value}`;requestDraw()});$('clear-button').onclick=()=>{paths=[];invalidateTraces();updatePathCount();$('canvas-hint').style.display='block';requestDraw()};$('reset-button').onclick=reset;$('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);$('fit-button').onclick=()=>{invalidateTraces();view={...(presets[current]||presets[lastPreset]).view};requestDraw()};$('download-button').onclick=()=>{const a=document.createElement('a');a.download='pplane-phase-portrait.png';a.href=canvas.toDataURL('image/png');a.click()};canvas.addEventListener('click',e=>{if(!functions)return;const r=canvas.getBoundingClientRect();paths.push([wx(e.clientX-r.left),wy(e.clientY-r.top)]);invalidateTraces();$('canvas-hint').style.display='none';updatePathCount();requestDraw()});canvas.addEventListener('mousemove',e=>{
+$('preset').addEventListener('change',e=>setPreset(e.target.value));for(const id of ['dx','dy'])$(id).addEventListener('input',()=>{current='custom';$('preset').value='custom';$('plot-title').textContent='Custom system';updateEquations()});for(const id of ['show-field','show-nullclines','show-grid','density','color-magnitude'])$(id).addEventListener('input',()=>{$('density-value').textContent=`${$('density').value} × ${$('density').value}`;requestDraw()});$('clear-button').onclick=()=>{paths=[];selectedPath=0;invalidateTraces();updatePathCount();$('canvas-hint').style.display='block';requestDraw()};$('reset-button').onclick=reset;$('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);$('fit-button').onclick=()=>{invalidateTraces();view={...(presets[current]||presets[lastPreset]).view};requestDraw()};$('download-button').onclick=()=>{const a=document.createElement('a');a.download='pplane-phase-portrait.png';a.href=canvas.toDataURL('image/png');a.click()};canvas.addEventListener('click',e=>{if(!functions)return;const r=canvas.getBoundingClientRect();paths.push([wx(e.clientX-r.left),wy(e.clientY-r.top)]);selectedPath=paths.length-1;invalidateTraces();$('canvas-hint').style.display='none';updatePathCount();requestDraw()});canvas.addEventListener('mousemove',e=>{
   const r=canvas.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top;
   $('coordinate').textContent=`x ${wx(px).toFixed(2)} · y ${wy(py).toFixed(2)}`;
   hoverPointer=[px,py];
   if(!hoverQueued){hoverQueued=true;requestAnimationFrame(()=>{hoverQueued=false;if(hoverPointer)updatePathHover(...hoverPointer)})}
 });
 canvas.addEventListener('mouseleave',()=>{hoverPointer=null;if(hover!==null){hover=null;$('path-hover').hidden=true;requestDraw()}});
-new ResizeObserver(resize).observe(canvas);for(const [name,value] of presets.pendulum.constants)addConstant(name,value);updateEquations();updatePathCount();
+$('diagnostic-seed').addEventListener('change',event=>{
+  selectedPath=Number(event.target.value)||0;energyCursor=null;requestDraw();
+});
+$('diagnostics-panel').addEventListener('toggle',()=>requestDraw());
+energyCanvas.addEventListener('pointermove',inspectEnergy);
+energyCanvas.addEventListener('pointerdown',inspectEnergy);
+energyCanvas.addEventListener('pointerleave',()=>{energyCursor=null;requestDraw()});
+new ResizeObserver(resize).observe(canvas);
+new ResizeObserver(()=>requestDraw()).observe(energyCanvas);for(const [name,value] of presets.pendulum.constants)addConstant(name,value);updateEquations();updatePathCount();
 const systemTheme=window.matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(theme){document.body.classList.toggle('dark',theme==='dark');document.querySelector('meta[name="theme-color"]').content=theme==='dark'?'#171d1b':'#f8f7f3';requestDraw()}
 let initialTheme=systemTheme.matches?'dark':'light';
