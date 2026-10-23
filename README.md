@@ -48,7 +48,9 @@ Choose **Vector fields** to explore phase portraits with the bundled pplane app.
 
 The studio follows your system's light or dark theme when it opens. Use the theme button in the header to switch all three views together for the current session.
 
-You can show the direction field, nullclines, and grid; change field density; zoom; clear paths; and download the canvas as a PNG. The phase portrait and constants stay in place when you switch tabs, but reset on reload.
+You can show the direction field, nullclines, and grid; change field density; zoom; clear paths; and download the canvas as a PNG. **Color by magnitude** optionally shades arrows by mathematical vector speed `|F(x,y)| = sqrt(ẋ²+ẏ²)`, without changing their normalized lengths. Its local scale starts at zero and clips values above the sampled 95th percentile; the numeric legend is recalculated after zooming or changing equations. Hovering a trajectory highlights both forward and backward branches and identifies its initial condition; clicking still adds a new path.
+
+The bundled pendulum includes optional **Trajectory diagnostics**: select a path and compare its phase portrait with energy over forward integration time. The two plots share the exact RK4 integration samples and a synchronized time cursor. With `ẋ=y`, `ẏ=-g*sin(x)-d*y`, the normalized energy is `E=y²/2+g(1-cos(x))`, so `dE/dt=-d*y²`: positive damping dissipates energy, zero damping approximately conserves it, and negative damping adds energy. This pendulum-specific diagnostic is hidden for custom systems rather than implying an energy function exists for every field. The phase portrait and constants stay in place when you switch tabs, but reset on reload.
 
 Pplane is copied into `public/pplane/` and served with Math Studio. Its equation syntax is numeric, with `x`, `y`, standard math functions, and explicit multiplication such as `2*x`. The bundled copy uses a local Inter font so this tab makes no font service requests.
 
