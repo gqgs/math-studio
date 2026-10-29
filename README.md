@@ -54,6 +54,17 @@ The bundled pendulum includes optional **Trajectory diagnostics**: select a path
 
 Pplane is copied into `public/pplane/` and served with Math Studio. Its equation syntax is numeric, with `x`, `y`, standard math functions, and explicit multiplication such as `2*x`. The bundled copy uses a local Inter font so this tab makes no font service requests.
 
+## Experiments (TSL + numerical models)
+
+Choose **Experiments** for a small, parameterized mathematical visualization workspace. Two built-in experiments test different computational paths:
+
+- **Interference field**: a live Three.js Shading Language (TSL) shader, with adjustable frequency, curvature, speed, presets, and pause/play. Three.js uses WebGPU when supported and falls back to WebGL 2; the backend selector can force WebGL 2 for comparison.
+- **Painlevé I**: integrate `w'' = 6w² + x` for `w(0)=0, w'(0)=k`. Compare nearby values of `k` against the reference parabola `6w² + x = 0`. Adaptive RK4 with step doubling terminates approaching numerical poles rather than bridging through them.
+
+Each experiment declares typed parameters and presets in `src/experiments/catalog.ts`; the shared UI generates controls. Shader computation stays in TSL (`TSLField.tsx`), whereas ODE integration remains a separate numerical module (`painleve.ts`). This is a prototype of a common experiment interface, not yet a general equation interpreter or arbitrary user-authored shader editor.
+
+Both run locally in the browser. GPU rendering needs WebGPU or WebGL 2 support. The experiments are intentionally mounted only while the Experiments tab is open so the GPU renderer can be disposed when leaving it.
+
 ## Editor
 
 CodeMirror 6 provides undo history, selections, line numbers, bracket matching/closing, search/replace, and editing commands. A small math-mode tokenizer highlights raw Typst math directly; it is not a complete Typst parser. The existing compiler supplies line-level inline errors, so diagnostics match the bundled Typst version.
