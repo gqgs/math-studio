@@ -14,7 +14,7 @@ const VARIABLES = new Set(['x', 'y', 't', 'a', 'b']);
 export const FUNCTIONS: Readonly<Record<string, number>> = {
   sin: 1, cos: 1, tan: 1, asin: 1, acos: 1, atan: 1,
   abs: 1, sqrt: 1, exp: 1, log: 1, ln: 1, floor: 1, ceil: 1, fract: 1,
-  sign: 1, min: 2, max: 2, pow: 2, atan2: 2, clamp: 3, mix: 3,
+  sign: 1, min: 2, max: 2, pow: 2, clamp: 3, mix: 3,
   smoothstep: 3,
 };
 
