@@ -3,7 +3,7 @@ import {
   WebGPURenderer, MeshBasicNodeMaterial,
 } from 'three/webgpu';
 import {
-  abs, acos, asin, atan, atan2, ceil, clamp, cos, exp, float, floor,
+  abs, acos, asin, atan, ceil, clamp, cos, exp, float, floor,
   fract, log, max, min, mix, pow, sign, sin, smoothstep, sqrt,
   tan, uniform, uv, vec3,
 } from 'three/tsl';
@@ -11,7 +11,7 @@ import {
 // The deep TSL node graph stays in JS to avoid pathological TS inference costs.
 // User expressions are *parsed* by expression.ts; no user text is executed.
 const FUNCTIONS = Object.freeze({
-  sin, cos, tan, asin, acos, atan, atan2, abs, sqrt, exp,
+  sin, cos, tan, asin, acos, atan, abs, sqrt, exp,
   log, ln: log, floor, ceil, fract, sign, min, max, pow,
   clamp, mix, smoothstep,
 });
