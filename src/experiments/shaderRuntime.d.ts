@@ -1,11 +1,14 @@
+import type { ExpressionNode } from './expression';
+
 export type ShaderHandle = {
-  setParameters(frequency: number, curvature: number): void;
+  setParameters(a: number, b: number): void;
   dispose(): void;
 };
 
 export type ShaderOptions = {
-  frequency: number;
-  curvature: number;
+  expression: ExpressionNode;
+  a: number;
+  b: number;
   backend: 'auto' | 'webgl';
   signal: AbortSignal;
   onStatus: (status: string) => void;
