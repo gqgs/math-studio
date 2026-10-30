@@ -1,36 +1,39 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ExpressionNode } from './expression';
 import { mountShader, type ShaderHandle } from './shaderRuntime';
 
 export function TSLField({
-  frequency, curvature, speed, playing, backend,
+  expression, a, b, speed, playing, backend,
 }: {
-  frequency: number;
-  curvature: number;
+  expression: ExpressionNode;
+  a: number;
+  b: number;
   speed: number;
   playing: boolean;
   backend: 'auto' | 'webgl';
 }) {
   const host = useRef<HTMLDivElement>(null);
   const handle = useRef<ShaderHandle | null>(null);
-  const settings = useRef({ frequency, curvature, speed, playing });
-  settings.current = { frequency, curvature, speed, playing };
+  const settings = useRef({ a, b, speed, playing });
+  settings.current = { a, b, speed, playing };
   const [status, setStatus] = useState('Initializing renderer…');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    handle.current?.setParameters(frequency, curvature);
-  }, [frequency, curvature]);
+    handle.current?.setParameters(a, b);
+  }, [a, b]);
 
   useEffect(() => {
     const element = host.current;
     if (!element) return;
     const abort = new AbortController();
-    setStatus('Initializing renderer…');
+    setStatus('Compiling expression…');
     setError('');
 
     void mountShader(element, {
-      frequency: settings.current.frequency,
-      curvature: settings.current.curvature,
+      expression,
+      a: settings.current.a,
+      b: settings.current.b,
       backend,
       signal: abort.signal,
       getPlayback: () => ({
@@ -47,11 +50,11 @@ export function TSLField({
         return;
       }
       handle.current = created;
-      created.setParameters(settings.current.frequency, settings.current.curvature);
+      created.setParameters(settings.current.a, settings.current.b);
     }).catch((cause: unknown) => {
       if (abort.signal.aborted) return;
-      setError(cause instanceof Error ? cause.message : 'Could not initialize GPU renderer');
-      setStatus('Renderer unavailable');
+      setError(cause instanceof Error ? cause.message : 'Could not initialize shader');
+      setStatus('Shader unavailable');
     });
 
     return () => {
@@ -59,17 +62,17 @@ export function TSLField({
       handle.current?.dispose();
       handle.current = null;
     };
-  }, [backend]);
+  }, [backend, expression]);
 
   return (
     <div className="experiment-shader">
       <div ref={host} className="experiment-canvas"
-        role="img" aria-label="Animated interference field rendered by the GPU" />
+        role="img" aria-label="Mathematical scalar field rendered by the GPU" />
       <div className="experiment-render-status" role="status">{status}</div>
-      {error && <p role="alert" className="experiment-error">{error}. Try the WebGL 2 backend.</p>}
+      {error && <p role="alert" className="experiment-error">{error}. Check the formula or try WebGL 2.</p>}
       <p className="experiment-note">
-        A procedural field evaluated in a TSL shader. All pixels share the same
-        mathematical expression; there are no precomputed frames.
+        The formula evaluates a scalar field per pixel. Colors show clamped f(x,y,t,a,b)²,
+        from dark to gold. This is an expression shader, not an ODE solver.
       </p>
     </div>
   );
