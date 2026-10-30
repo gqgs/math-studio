@@ -1,0 +1,129 @@
+.experiment-workspace { min-height: calc(100vh - 235px); }
+.experiment-intro { margin-bottom: 25px; }
+.experiment-intro h1 { margin: 9px 0 6px; }
+.experiment-intro p { color: var(--muted); font-size: 13px; margin: 0; }
+.experiment-layout {
+  display: grid;
+  grid-template-columns: minmax(270px, 350px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  padding-bottom: 32px;
+}
+.experiment-controls { overflow: visible; }
+.experiment-control-body { padding: 21px; }
+.experiment-label, .experiment-section-title, .experiment-backend label {
+  display: block;
+  font-size: 11px;
+  font-weight: 650;
+  margin-bottom: 10px;
+}
+.experiment-control-body select,
+.experiment-parameter input[type="number"] {
+  border: 1px solid var(--line);
+  background: var(--plot-bg);
+  border-radius: 6px;
+  padding: 9px 10px;
+  color: inherit;
+  max-width: 100%;
+  font: inherit;
+}
+.experiment-control-body select { width: 100%; font-size: 12px; }
+.experiment-description, .experiment-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.experiment-description { margin: 13px 0 12px; }
+.experiment-equation {
+  background: var(--soft);
+  padding: 13px;
+  border-radius: 6px;
+  font: 12px/1.6 ui-monospace, Consolas, monospace;
+  overflow-wrap: anywhere;
+  margin-bottom: 25px;
+}
+.experiment-section-title { padding-top: 7px; }
+.experiment-presets { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 23px; }
+.experiment-presets button, .experiment-playback button {
+  border: 1px solid var(--line);
+  background: var(--plot-bg);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+.experiment-presets button:hover, .experiment-playback button:hover { border-color: var(--green); }
+.experiment-parameter { padding: 10px 0 13px; border-bottom: 1px solid var(--line); }
+.experiment-parameter-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.experiment-parameter label { font-size: 11px; font-weight: 550; }
+.experiment-parameter input[type="number"] { width: 112px; font: 11px ui-monospace, monospace; }
+.experiment-parameter input[type="range"] { width: 100%; accent-color: var(--green); margin: 13px 0 5px; }
+.experiment-parameter p { font-size: 10px; color: var(--muted); margin: 0; }
+.experiment-playback { margin-top: 20px; display: flex; gap: 9px; }
+.experiment-playback button:first-child { background: var(--green); color: white; }
+.experiment-playback button:first-child:hover { color: white; filter: brightness(1.12); }
+.experiment-backend { padding-top: 24px; }
+.experiment-display { overflow: hidden; }
+.experiment-canvas { position: relative; aspect-ratio: 1.6; background: #080e17; width: 100%; min-height: 330px; overflow: hidden; }
+.experiment-canvas canvas { display: block; width: 100%; height: 100%; }
+.experiment-shader { background: #0c121e; color: #dde8ef; }
+.experiment-shader .experiment-note { color: #a2b2c8; padding: 0 20px 10px; }
+.experiment-render-status {
+  padding: 11px 20px 0;
+  color: #b9d0df;
+  font: 11px ui-monospace, monospace;
+}
+.experiment-error { color: #efb7a3; padding: 0 20px; font-size: 12px; }
+.experiment-footer {
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  color: var(--muted); font-size: 10px;
+  padding: 13px 20px; border-top: 1px solid var(--line);
+}
+.experiment-footer a { color: var(--green); }
+@media (max-width: 850px) {
+  .experiment-layout { grid-template-columns: 1fr; }
+  .experiment-canvas { min-height: 280px; }
+  .experiment-control-body { padding: 17px; }
+}
+
+.experiment-formula-input {
+  display: block;
+  width: 100%;
+  min-height: 138px;
+  resize: vertical;
+  font: 11px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace;
+  color: inherit;
+  background: var(--plot-bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+  overflow-wrap: anywhere;
+}
+.experiment-formula-input[aria-invalid='true'] {
+  border-color: #b45147;
+}
+.experiment-formula-help, .experiment-formula-error {
+  margin: 10px 0 11px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.experiment-formula-help { color: var(--muted); }
+.experiment-formula-error { color: #d67d6b; }
+.experiment-apply {
+  width: 100%;
+  background: var(--green);
+  color: #132116;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+}
+.experiment-apply:hover { filter: brightness(1.08); }
+.experiment-apply span { font-weight: 400; font-size: 10px; opacity: 0.75; }
+:root[data-theme='light'] .experiment-apply { color: white; }
+@media (max-width: 550px) {
+  .experiment-layout { gap: 12px; }
+  .experiment-intro h1 { font-size: 30px; }
+  .experiment-formula-input { min-height: 115px; }
+}

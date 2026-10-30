@@ -38,6 +38,7 @@ import { CATEGORIES, QUICK_SYMBOLS, SYMBOLS } from './symbols';
 import { MathEditor, type MathEditorHandle, type EditorSnapshot } from './MathEditor';
 import { useRenderer } from './use-renderer';
 import { PlotView } from './PlotView';
+import { ExperimentsView } from './experiments/ExperimentsView';
 
 const DRAFT_KEY = 'math-studio:draft:v1';
 
@@ -68,7 +69,7 @@ function FormulaImage({ svg, source, zoom }: { svg: string; source: string; zoom
 }
 
 export default function App() {
-  const [view, setView] = useState<'write' | 'plot' | 'field'>('write');
+  const [view, setView] = useState<'write' | 'plot' | 'field' | 'experiments'>('write');
   const [fieldOpened, setFieldOpened] = useState(false);
   const [systemDark, setSystemDark] = useState(
     () => window.matchMedia('(prefers-color-scheme: dark)').matches,
@@ -310,6 +311,9 @@ export default function App() {
             }}
           >
             Vector fields
+          </button>
+          <button aria-pressed={view === 'experiments'} onClick={() => setView('experiments')}>
+            Experiments
           </button>
         </nav>
         <div className="header-right">
@@ -720,6 +724,7 @@ export default function App() {
             />
           )}
         </div>
+        {view === 'experiments' && <ExperimentsView />}
       </main>
 
       <footer className="site-footer">

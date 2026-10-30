@@ -26,7 +26,7 @@ npm run preview
 
 - Write raw Typst math, for example `x^2 + y^2 = r^2`. A single enclosing `$…$` pair is also accepted.
 - A single newline creates a visible line break inside the same preview cell. A blank line (two newlines) starts a new cell; whitespace-only blank lines work too.
-- Use `&` to align equations across lines in a cell. Explicit Typst `\` breaks also work; combining one with an input newline does not add an extra break.
+- Use `&` to align equations across lines in a cell. Explicit Typst `` breaks also work; combining one with an input newline does not add an extra break.
 - Symbol buttons insert at the editor’s last selection. Roots, fractions, powers, and other structures can wrap selected text.
 - Undo/redo includes typing, symbol insertion, examples, and clearing. Use the toolbar, Ctrl/⌘ Z, or Ctrl/⌘ Shift Z.
 - Examples insert after the current formula. Copy source copies the whole scratchpad.
@@ -46,13 +46,31 @@ Plots are sampled approximations; very narrow features may be missed. Undefined 
 
 Choose **Vector fields** to explore phase portraits with the bundled pplane app. Pick a preset or enter equations for ẋ and ẏ, then click the canvas to trace a trajectory. Every preset exposes its parameters as named constants beneath the equations, so you can adjust them without rewriting the formulas. For example, the Selkov preset uses `a` and `b` in `ẋ = -x + a*y + x^2*y` and `ẏ = b - a*y - x^2*y`; changing either value redraws the field and trajectories. Constant names must start with a letter and be distinct from `x`, `y`, and math function names. Values must be finite numbers.
 
-The studio follows your system's light or dark theme when it opens. Use the theme button in the header to switch all three views together for the current session.
+The studio follows your system's light or dark theme when it opens. Use the theme button in the header to switch all views together for the current session.
 
 You can show the direction field, nullclines, and grid; change field density; zoom; clear paths; and download the canvas as a PNG. **Color by magnitude** optionally shades arrows by mathematical vector speed `|F(x,y)| = sqrt(ẋ²+ẏ²)`, without changing their normalized lengths. Its local scale starts at zero and clips values above the sampled 95th percentile; the numeric legend is recalculated after zooming or changing equations. Hovering a trajectory highlights both forward and backward branches and identifies its initial condition; clicking still adds a new path.
 
 The bundled pendulum includes optional **Trajectory diagnostics**: select a path and compare its phase portrait with energy over forward integration time. The two plots share the exact RK4 integration samples and a synchronized time cursor. With `ẋ=y`, `ẏ=-g*sin(x)-d*y`, the normalized energy is `E=y²/2+g(1-cos(x))`, so `dE/dt=-d*y²`: positive damping dissipates energy, zero damping approximately conserves it, and negative damping adds energy. This pendulum-specific diagnostic is hidden for custom systems rather than implying an energy function exists for every field. The phase portrait and constants stay in place when you switch tabs, but reset on reload.
 
 Pplane is copied into `public/pplane/` and served with Math Studio. Its equation syntax is numeric, with `x`, `y`, standard math functions, and explicit multiplication such as `2*x`. The bundled copy uses a local Inter font so this tab makes no font service requests.
+
+## Experiments: editable TSL scalar fields
+
+The **Experiments** tab provides an editable mathematical expression that is converted to a GPU shader using Three.js Shading Language (TSL). It is not a JavaScript editor and does **not** use eval or string-generated GLSL/WGSL.
+
+- Enter a real scalar expression f(x, y, t, a, b) and click **Apply formula** (or Ctrl/⌘+Enter).
+- `x` and `y` are UV-space coordinates in [-1, 1]. `t` evolves with the Play control; sliders control `a`, `b`, and time speed.
+- Functions include `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `abs`, `sqrt`, `exp`, `ln`/`log` (natural logarithm), `min`, `max`, `pow`, `clamp`, `mix`, `smoothstep`, `floor`, `ceil`, `fract`, and `sign`.
+- Operators are `+`, `-`, `*`, `/`, `^`, and parentheses. Multiplication must be explicit. Constants `pi` and `e` are supported.
+- Try **Interference**, **Radial ripples**, **Moiré**, and **Saddle** presets, then edit the expressions.
+- The scalar field's squared value is clamped to [0, 1] and color-mapped dark-to-gold. This mapping preserves negative-valued interference patterns; more visualization modes are future work.
+- The WebGPU renderer automatically falls back to WebGL 2 when required; the selector lets you force WebGL 2. Both backends are compiled from the same TSL graph.
+
+The parser is bounded (600 source characters, 200 tokens, 128 expression nodes and 32 levels of nesting) and rejects unsupported syntax; the last successfully applied expression remains visible on errors. Numerical ODE solving, arbitrary shader programming, color-expression editing, and user-defined functions are not supported in this first version. Painlevé I was intentionally removed until a proper animation treatment is designed.
+
+Parser implementation: `src/experiments/expression.ts`; typed React-to-shader boundary: `shaderRuntime.d.ts`; TSL graph builder: `shaderRuntime.js`. The graph builder is JavaScript to avoid expensive TypeScript inference of nested TSL nodes, while the user input parser and UI remain fully typed.
+
+All computation runs locally in the browser. The GPU renderer is disposed when the user switches away from Experiments.
 
 ## Editor
 
