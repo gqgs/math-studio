@@ -26,7 +26,7 @@ npm run preview
 
 - Write raw Typst math, for example `x^2 + y^2 = r^2`. A single enclosing `$…$` pair is also accepted.
 - A single newline creates a visible line break inside the same preview cell. A blank line (two newlines) starts a new cell; whitespace-only blank lines work too.
-- Use `&` to align equations across lines in a cell. Explicit Typst `\` breaks also work; combining one with an input newline does not add an extra break.
+- Use `&` to align equations across lines in a cell. Explicit Typst `` breaks also work; combining one with an input newline does not add an extra break.
 - Symbol buttons insert at the editor’s last selection. Roots, fractions, powers, and other structures can wrap selected text.
 - Undo/redo includes typing, symbol insertion, examples, and clearing. Use the toolbar, Ctrl/⌘ Z, or Ctrl/⌘ Shift Z.
 - Examples insert after the current formula. Copy source copies the whole scratchpad.
@@ -59,16 +59,16 @@ Pplane is copied into `public/pplane/` and served with Math Studio. Its equation
 The **Experiments** tab provides an editable mathematical expression that is converted to a GPU shader using Three.js Shading Language (TSL). It is not a JavaScript editor and does **not** use eval or string-generated GLSL/WGSL.
 
 - Enter a real scalar expression f(x, y, t, a, b) and click **Apply formula** (or Ctrl/⌘+Enter).
-- \`x\` and \`y\` are UV-space coordinates in [-1, 1]. \`t\` evolves with the Play control; sliders control \`a\`, \`b\`, and time speed.
-- Functions include \`sin\`, \`cos\`, \`tan\`, \`asin\`, \`acos\`, \`atan\`, \`atan2\`, \`abs\`, \`sqrt\`, \`exp\`, \`ln\`/\`log\` (natural logarithm), \`min\`, \`max\`, \`pow\`, \`clamp\`, \`mix\`, \`smoothstep\`, \`floor\`, \`ceil\`, \`fract\`, and \`sign\`.
-- Operators are \`+\`, \`-\`, \`*\`, \`/\`, \`^\`, and parentheses. Multiplication must be explicit. Constants \`pi\` and \`e\` are supported.
+- `x` and `y` are UV-space coordinates in [-1, 1]. `t` evolves with the Play control; sliders control `a`, `b`, and time speed.
+- Functions include `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `abs`, `sqrt`, `exp`, `ln`/`log` (natural logarithm), `min`, `max`, `pow`, `clamp`, `mix`, `smoothstep`, `floor`, `ceil`, `fract`, and `sign`.
+- Operators are `+`, `-`, `*`, `/`, `^`, and parentheses. Multiplication must be explicit. Constants `pi` and `e` are supported.
 - Try **Interference**, **Radial ripples**, **Moiré**, and **Saddle** presets, then edit the expressions.
 - The scalar field's squared value is clamped to [0, 1] and color-mapped dark-to-gold. This mapping preserves negative-valued interference patterns; more visualization modes are future work.
 - The WebGPU renderer automatically falls back to WebGL 2 when required; the selector lets you force WebGL 2. Both backends are compiled from the same TSL graph.
 
 The parser is bounded (600 source characters, 200 tokens, 128 expression nodes and 32 levels of nesting) and rejects unsupported syntax; the last successfully applied expression remains visible on errors. Numerical ODE solving, arbitrary shader programming, color-expression editing, and user-defined functions are not supported in this first version. Painlevé I was intentionally removed until a proper animation treatment is designed.
 
-Parser implementation: \`src/experiments/expression.ts\`; typed React-to-shader boundary: \`shaderRuntime.d.ts\`; TSL graph builder: \`shaderRuntime.js\`. The graph builder is JavaScript to avoid expensive TypeScript inference of nested TSL nodes, while the user input parser and UI remain fully typed.
+Parser implementation: `src/experiments/expression.ts`; typed React-to-shader boundary: `shaderRuntime.d.ts`; TSL graph builder: `shaderRuntime.js`. The graph builder is JavaScript to avoid expensive TypeScript inference of nested TSL nodes, while the user input parser and UI remain fully typed.
 
 All computation runs locally in the browser. The GPU renderer is disposed when the user switches away from Experiments.
 
