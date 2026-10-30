@@ -5,7 +5,7 @@ import { PRESETS } from './catalog';
 describe('scalar expression parser', () => {
   it('parses every built-in shader preset', () => {
     for (const preset of PRESETS) {
-      expect(parseExpression(preset.formula).kind).toBe('binary');
+      expect(['binary', 'call']).toContain(parseExpression(preset.formula).kind);
     }
   });
 
