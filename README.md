@@ -46,7 +46,7 @@ Plots are sampled approximations; very narrow features may be missed. Undefined 
 
 Choose **Vector fields** to explore phase portraits with the bundled pplane app. Pick a preset or enter equations for ẋ and ẏ, then click the canvas to trace a trajectory. Every preset exposes its parameters as named constants beneath the equations, so you can adjust them without rewriting the formulas. For example, the Selkov preset uses `a` and `b` in `ẋ = -x + a*y + x^2*y` and `ẏ = b - a*y - x^2*y`; changing either value redraws the field and trajectories. Constant names must start with a letter and be distinct from `x`, `y`, and math function names. Values must be finite numbers.
 
-The studio follows your system's light or dark theme when it opens. Use the theme button in the header to switch all three views together for the current session.
+The studio follows your system's light or dark theme when it opens. Use the theme button in the header to switch all views together for the current session.
 
 You can show the direction field, nullclines, and grid; change field density; zoom; clear paths; and download the canvas as a PNG. **Color by magnitude** optionally shades arrows by mathematical vector speed `|F(x,y)| = sqrt(ẋ²+ẏ²)`, without changing their normalized lengths. Its local scale starts at zero and clips values above the sampled 95th percentile; the numeric legend is recalculated after zooming or changing equations. Hovering a trajectory highlights both forward and backward branches and identifies its initial condition; clicking still adds a new path.
 
@@ -54,16 +54,23 @@ The bundled pendulum includes optional **Trajectory diagnostics**: select a path
 
 Pplane is copied into `public/pplane/` and served with Math Studio. Its equation syntax is numeric, with `x`, `y`, standard math functions, and explicit multiplication such as `2*x`. The bundled copy uses a local Inter font so this tab makes no font service requests.
 
-## Experiments (TSL + numerical models)
+## Experiments: editable TSL scalar fields
 
-Choose **Experiments** for a small, parameterized mathematical visualization workspace. Two built-in experiments test different computational paths:
+The **Experiments** tab provides an editable mathematical expression that is converted to a GPU shader using Three.js Shading Language (TSL). It is not a JavaScript editor and does **not** use eval or string-generated GLSL/WGSL.
 
-- **Interference field**: a live Three.js Shading Language (TSL) shader, with adjustable frequency, curvature, speed, presets, and pause/play. Three.js uses WebGPU when supported and falls back to WebGL 2; the backend selector can force WebGL 2 for comparison.
-- **Painlevé I**: integrate `w'' = 6w² + x` for `w(0)=0, w'(0)=k`. Compare nearby values of `k` against the reference parabola `6w² + x = 0`. Adaptive RK4 with step doubling terminates approaching numerical poles rather than bridging through them.
+- Enter a real scalar expression f(x, y, t, a, b) and click **Apply formula** (or Ctrl/⌘+Enter).
+- \`x\` and \`y\` are UV-space coordinates in [-1, 1]. \`t\` evolves with the Play control; sliders control \`a\`, \`b\`, and time speed.
+- Functions include \`sin\`, \`cos\`, \`tan\`, \`asin\`, \`acos\`, \`atan\`, \`atan2\`, \`abs\`, \`sqrt\`, \`exp\`, \`ln\`/\`log\` (natural logarithm), \`min\`, \`max\`, \`pow\`, \`clamp\`, \`mix\`, \`smoothstep\`, \`floor\`, \`ceil\`, \`fract\`, and \`sign\`.
+- Operators are \`+\`, \`-\`, \`*\`, \`/\`, \`^\`, and parentheses. Multiplication must be explicit. Constants \`pi\` and \`e\` are supported.
+- Try **Interference**, **Radial ripples**, **Moiré**, and **Saddle** presets, then edit the expressions.
+- The scalar field's squared value is clamped to [0, 1] and color-mapped dark-to-gold. This mapping preserves negative-valued interference patterns; more visualization modes are future work.
+- The WebGPU renderer automatically falls back to WebGL 2 when required; the selector lets you force WebGL 2. Both backends are compiled from the same TSL graph.
 
-Each experiment declares typed parameters and presets in `src/experiments/catalog.ts`; the shared UI generates controls. Shader computation stays in TSL (`TSLField.tsx`), whereas ODE integration remains a separate numerical module (`painleve.ts`). This is a prototype of a common experiment interface, not yet a general equation interpreter or arbitrary user-authored shader editor.
+The parser is bounded (600 source characters, 200 tokens, 128 expression nodes and 32 levels of nesting) and rejects unsupported syntax; the last successfully applied expression remains visible on errors. Numerical ODE solving, arbitrary shader programming, color-expression editing, and user-defined functions are not supported in this first version. Painlevé I was intentionally removed until a proper animation treatment is designed.
 
-Both run locally in the browser. GPU rendering needs WebGPU or WebGL 2 support. The experiments are intentionally mounted only while the Experiments tab is open so the GPU renderer can be disposed when leaving it.
+Parser implementation: \`src/experiments/expression.ts\`; typed React-to-shader boundary: \`shaderRuntime.d.ts\`; TSL graph builder: \`shaderRuntime.js\`. The graph builder is JavaScript to avoid expensive TypeScript inference of nested TSL nodes, while the user input parser and UI remain fully typed.
+
+All computation runs locally in the browser. The GPU renderer is disposed when the user switches away from Experiments.
 
 ## Editor
 
