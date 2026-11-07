@@ -42,13 +42,6 @@ export function ExperimentsView() {
 
   return (
     <section className="experiment-workspace" aria-label="Mathematical shader experiments">
-      <header className="experiment-intro">
-        <div>
-          <span className="eyebrow">MATHEMATICAL EXPERIMENTS</span>
-          <h1>Explore the <em>equation.</em></h1>
-          <p>Enter a scalar expression, adjust its parameters, and render it on the GPU using TSL.</p>
-        </div>
-      </header>
       <div className="experiment-layout">
         <div className="panel experiment-controls">
           <div className="panel-heading">

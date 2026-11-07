@@ -1,7 +1,4 @@
-.experiment-workspace { min-height: calc(100vh - 235px); }
-.experiment-intro { margin-bottom: 25px; }
-.experiment-intro h1 { margin: 9px 0 6px; }
-.experiment-intro p { color: var(--muted); font-size: 13px; margin: 0; }
+.experiment-workspace { flex: 1; min-height: 0; }
 .experiment-layout {
   display: grid;
   grid-template-columns: minmax(270px, 350px) minmax(0, 1fr);
@@ -124,6 +121,5 @@
 :root[data-theme='light'] .experiment-apply { color: white; }
 @media (max-width: 550px) {
   .experiment-layout { gap: 12px; }
-  .experiment-intro h1 { font-size: 30px; }
   .experiment-formula-input { min-height: 115px; }
 }
