@@ -123,3 +123,19 @@
   .experiment-layout { gap: 12px; }
   .experiment-formula-input { min-height: 115px; }
 }
+
+/* Keep experiment modes in the existing workspace, without another page heading. */
+.experiment-mode-switch { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.experiment-mode-switch button {
+  border: 1px solid var(--line); border-radius: 6px;
+  padding: 8px 12px; background: var(--plot-bg); font-size: 12px;
+}
+.experiment-mode-switch button[aria-pressed="true"] { border-color: var(--green); color: var(--green); }
+.cobweb-intro { font-size: 12px; line-height: 1.65; color: var(--muted); margin-bottom: 12px; }
+.cobweb-meta { margin-top: 20px; font: 11px/1.6 ui-monospace, monospace; color: var(--green); }
+.cobweb-plot { background: #0a131f; position: relative; }
+.cobweb-plot canvas { display: block; width: 100%; height: auto; cursor: crosshair; }
+.cobweb-plot canvas:focus-visible { outline: 2px solid #f4bc76; outline-offset: -3px; }
+.cobweb-error { color: #ffc5b7; font-size: 12px; padding: 10px 15px;
+  background: #6b2a31; margin: 0; }
+.experiment-playback button:disabled { opacity: .5; cursor: not-allowed; }

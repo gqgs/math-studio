@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PARAMETERS, PRESETS, clampParameter, initialParameters } from './catalog';
 import { parseExpression, type ExpressionNode } from './expression';
 import { TSLField } from './TSLField';
+import { JuliaCobwebView } from './JuliaCobwebView';
 import './experiments.css';
 
 type Values = ReturnType<typeof initialParameters>;
@@ -15,6 +16,7 @@ export function ExperimentsView() {
   const [values, setValues] = useState<Values>(initialParameters);
   const [playing, setPlaying] = useState(true);
   const [backend, setBackend] = useState<'auto' | 'webgl'>('auto');
+  const [mode, setMode] = useState<'shader' | 'julia'>('shader');
 
   function applyFormula() {
     try {
@@ -42,6 +44,15 @@ export function ExperimentsView() {
 
   return (
     <section className="experiment-workspace" aria-label="Mathematical shader experiments">
+      <div className="experiment-mode-switch" role="group" aria-label="Experiment mode">
+        <button type="button" aria-pressed={mode === 'shader'} onClick={() => setMode('shader')}>
+          Scalar shader
+        </button>
+        <button type="button" aria-pressed={mode === 'julia'} onClick={() => setMode('julia')}>
+          Julia / WASM cobweb
+        </button>
+      </div>
+      {mode === 'julia' ? <JuliaCobwebView /> : (
       <div className="experiment-layout">
         <div className="panel experiment-controls">
           <div className="panel-heading">
@@ -136,6 +147,7 @@ export function ExperimentsView() {
           </div>
         </div>
       </div>
+      )}
     </section>
   );
 }
