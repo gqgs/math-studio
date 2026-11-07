@@ -18,14 +18,16 @@ smaller than porting DynamicalSystems.jl or Makie.
 Install Julia 1.12 and Node.js 24 or newer:
 
 ```sh
-julia --project=julia-wasm -e 'using Pkg; Pkg.instantiate()'
 npm ci
-npm run wasm:build
-npm run wasm:verify
-npm test
-npm run build
 npm run dev
 ```
+
+`npm run dev` now generates `public/julia-wasm/logistic_step.wasm` automatically
+if missing, invalid, or older than the Julia source. The same guard runs before
+`npm run build`. It installs the Julia project dependencies as needed. To
+regenerate explicitly, run `npm run wasm:build`; to test the generated artifact,
+run `npm run wasm:verify`. Developers without Julia 1.12 receive a clear error
+before Vite starts, rather than a broken page.
 
 Open **Experiments → Julia / WASM cobweb**. Change the growth rate and initial
 condition, select a trajectory by clicking the plot, then Step/Play/Rewind.
@@ -33,7 +35,9 @@ condition, select a trajectory by clicking the plot, then Step/Play/Rewind.
 The WasmGC module must load in the target browser. Compilation is performed
 during the build, not on each slider change. If the WASM module is absent or
 cannot instantiate, the view shows a visible error rather than silently
-running JavaScript.
+running JavaScript. In particular, it detects Vite's HTML index fallback for a
+missing asset (the `<!doctype html>` response previously caused a confusing
+WebAssembly magic-word error).
 
 ## What this proves (and does not)
 

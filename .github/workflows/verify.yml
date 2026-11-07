@@ -17,8 +17,6 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1.12'
-      - run: julia --project=julia-wasm -e 'using Pkg; Pkg.instantiate()'
-      - run: npm run wasm:build
+      - run: npm run build
       - run: npm run wasm:verify
       - run: npm test
-      - run: npm run build

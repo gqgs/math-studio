@@ -12,7 +12,10 @@
     "format": "prettier --write src tests *.ts *.json *.html README.md",
     "format:check": "prettier --check src tests *.ts *.json *.html README.md",
     "wasm:build": "julia --project=julia-wasm julia-wasm/build.jl",
-    "wasm:verify": "node scripts/verify-wasm.mjs"
+    "wasm:verify": "node scripts/verify-wasm.mjs",
+    "predev": "npm run wasm:ensure",
+    "prebuild": "npm run wasm:ensure",
+    "wasm:ensure": "node scripts/ensure-wasm.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",

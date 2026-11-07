@@ -8,10 +8,26 @@ export async function loadLogisticStep(): Promise<LogisticStep> {
   const url = import.meta.env.BASE_URL + 'julia-wasm/logistic_step.wasm';
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error('Julia/WASM module unavailable (HTTP ' + response.status +
-      '). Run npm run wasm:build before starting the app.');
+    throw new Error(
+      'Julia/WASM asset unavailable (HTTP ' + response.status + ') at ' + url +
+      '. Run npm run dev to generate it, or verify the deployed asset path.',
+    );
   }
+
   const bytes = await response.arrayBuffer();
+  // Vite's SPA fallback can return index.html with HTTP 200 for a missing
+  // .wasm file. Check the actual bytes before trying to instantiate HTML.
+  const header = new Uint8Array(bytes, 0, Math.min(4, bytes.byteLength));
+  if (header.length !== 4 || header[0] !== 0x00 || header[1] !== 0x61 ||
+      header[2] !== 0x73 || header[3] !== 0x6d) {
+    const type = response.headers.get('content-type') ?? 'unknown content type';
+    throw new Error(
+      'Julia/WASM asset is not WebAssembly (' + type + ') at ' + url +
+      '. The server may be returning HTML for a missing file. ' +
+      'Restart with npm run dev to generate the asset, or check your deployment.',
+    );
+  }
+
   const { instance } = await WebAssembly.instantiate(bytes);
   const exported = instance.exports.logistic_step;
   if (typeof exported !== 'function') {
