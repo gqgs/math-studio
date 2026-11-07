@@ -29,6 +29,14 @@ regenerate explicitly, run `npm run wasm:build`; to test the generated artifact,
 run `npm run wasm:verify`. Developers without Julia 1.12 receive a clear error
 before Vite starts, rather than a broken page.
 
+If `predev` stops after "Generating Julia/WASM module", Julia may have failed
+or received a fatal signal. The bootstrap script now prints the selected Julia
+executable, version, exit code or signal, and a diagnostic before it exits.
+If your distribution-provided Julia crashes in `Pkg.instantiate()`, install
+official Julia 1.12 through Juliaup and make it the default, or run
+`JULIA_BIN="$HOME/.juliaup/bin/julia" npm run dev`. The project does not
+silently fall back to JavaScript if Julia compilation fails.
+
 Open **Experiments → Julia / WASM cobweb**. Change the growth rate and initial
 condition, select a trajectory by clicking the plot, then Step/Play/Rewind.
 
