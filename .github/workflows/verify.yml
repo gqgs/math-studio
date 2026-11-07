@@ -21,3 +21,10 @@ jobs:
       - run: npm run build
       - run: npm run wasm:verify
       - run: npm test
+      # Temporary PoC output: download this to run locally if Julia crashes.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: julia-wasm-logistic-step
+          path: public/julia-wasm/logistic_step.wasm
+          if-no-files-found: error
+          retention-days: 14

@@ -32,9 +32,11 @@ before Vite starts, rather than a broken page.
 If `predev` stops after "Generating Julia/WASM module", Julia may have failed
 or received a fatal signal. The bootstrap script now prints the selected Julia
 executable, version, exit code or signal, and a diagnostic before it exits.
-If your distribution-provided Julia crashes in `Pkg.instantiate()`, install
-official Julia 1.12 through Juliaup and make it the default, or run
-`JULIA_BIN="$HOME/.juliaup/bin/julia" npm run dev`. The project does not
+If Julia crashes in `Pkg.instantiate()`, first test whether `LD_LIBRARY_PATH`
+or `LD_PRELOAD` is interfering: `env -u LD_LIBRARY_PATH -u LD_PRELOAD npm run dev`.
+Juliaup 1.12 is the verified compiler, but even that can crash due to local
+library conflicts or native runtime bugs. The bootstrap prints the phase
+(package resolution versus kernel compilation) before starting it. The project does not
 silently fall back to JavaScript if Julia compilation fails.
 
 Open **Experiments → Julia / WASM cobweb**. Change the growth rate and initial
@@ -46,6 +48,26 @@ cannot instantiate, the view shows a visible error rather than silently
 running JavaScript. In particular, it detects Vite's HTML index fallback for a
 missing asset (the `<!doctype html>` response previously caused a confusing
 WebAssembly magic-word error).
+
+## Try the verified CI build without compiling Julia locally
+
+A successful **Verify Math Studio** PR workflow now uploads
+`julia-wasm-logistic-step`. Download the artifact from the run's **Artifacts**
+section and extract `logistic_step.wasm` into `public/julia-wasm/`.
+
+If you use the GitHub CLI, replace `RUN_ID` with the latest successful run:
+
+```sh
+mkdir -p public/julia-wasm
+gh run download RUN_ID -R gqgs/math-studio -n julia-wasm-logistic-step -D public/julia-wasm
+npm run wasm:verify
+npm run dev
+```
+
+The downloaded module is verified by the existing `wasm:ensure` check.
+It is not committed to Git and does not constitute a runtime JavaScript fallback.
+This is an escape hatch for testing the PoC while investigating native Julia
+crashes, rather than a decision about long-term binary distribution.
 
 ## What this proves (and does not)
 

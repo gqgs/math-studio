@@ -42,8 +42,14 @@ if (!(await upToDate())) {
 
   // Report both numeric exit codes and signals. Previously a SIGSEGV returned
   // status=null, then process.exit(1) silently swallowed the actual failure.
-  const args = ['--project=julia-wasm', '-e',
-    'using Pkg; Pkg.instantiate(); include("julia-wasm/build.jl")'];
+  const args = ['--startup-file=no', '--project=julia-wasm', '-e', [
+    'using Pkg',
+    'println("Julia/WASM: starting dependency resolution"); flush(stdout)',
+    'Pkg.instantiate()',
+    'println("Julia/WASM: dependencies resolved; compiling kernel"); flush(stdout)',
+    'include("julia-wasm/build.jl")',
+    'println("Julia/WASM: compilation completed"); flush(stdout)',
+  ].join('; ')];
   const run = spawnSync(command, args, { cwd: root, stdio: 'inherit' });
   const failure = explainJuliaFailure(run, command);
   if (failure) {
